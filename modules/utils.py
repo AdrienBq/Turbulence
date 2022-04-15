@@ -5,6 +5,16 @@ import matplotlib.pyplot as plt
 import os
 import re
 
+from tqdm.notebook import tqdm, trange
+from netCDF4 import Dataset
+import netCDF4 as nc4
+
+import os
+import sys
+from pathlib import Path
+
+os.chdir(Path(sys.path[0]).parent)
+
 
 def print_one_alt(path_data,color):
     '''
@@ -84,6 +94,35 @@ def concatenate_time(dir,variable):
         tot_arr = np.concatenate((tot_arr,t_arr),axis=0)
         
     return tot_arr
+
+def write_nc_file(data,coarsening_factor,var,nz=376):
+    print ('writing out')
+    
+    n_samples = data.shape[0]
+    len_sample = len(var*nz)
+
+    # open a netCDF file to write
+    ncout = Dataset('data/input_dataset_L_'+coarsening_factor+'.nc', 'w', format='NETCDF4')
+
+    # define axis size
+    ncout.createDimension('index', n_samples)  
+    ncout.createDimension('i', len_sample)  
+
+    # create time axis
+    index = ncout.createVariable('index', np.dtype('int16').char, ('index'))
+    index.long_name = 'index'
+    i = ncout.createVariable('i', np.dtype('int16').char, ('i'))
+    i.long_name = 'i'
+
+    # copy axis from original dataset
+    index[:] = np.arange(0,n_samples)
+    i[:] = np.arange(0,len_sample)
+    
+    # create variable array
+    vout = ncout.createVariable('sample', np.dtype('double').char, ('index','i'))
+    vout[:,:] = data
+
+    ncout.close()
 
 
 def split_train_val(input_ds, batch_size):
