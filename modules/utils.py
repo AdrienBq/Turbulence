@@ -96,6 +96,16 @@ def concatenate_time(dir,variable):
     return tot_arr
 
 def write_nc_file(data,coarsening_factor,var,nz=376):
+    '''
+    ## Description
+    Write a netCDF file from a numpy array.
+
+    ## Parameters
+    - data (np.array) : array to write
+    - coarsening_factor (int) : coarsening factor of the data
+    - var (list of strings) : names of the variables
+    - nz (int) : number of altitude layers
+    '''
     print ('writing out')
     
     n_samples = data.shape[0]
@@ -124,6 +134,75 @@ def write_nc_file(data,coarsening_factor,var,nz=376):
 
     ncout.close()
 
+
+def write_coarse_file(data,coarsening_factor,var,nz=376):
+    '''
+    ## Description
+    Write a netCDF file from a numpy array after coarsening.
+
+    ## Parameters
+    - data (np.array) : array to write
+    - coarsening_factor (int) : coarsening factor of the data
+    - var (str) : name of the variable
+    - nz (int) : number of altitude layers
+    '''
+    print ('writing out')
+    
+    T = data.shape[0]
+    nz = data.shape[1]
+    ny = data.shape[2]
+    nx = data.shape[3]
+
+    # open a netCDF file to write
+    ncout = Dataset('data/'+var+'_L_'+coarsening_factor+'.nc', 'w', format='NETCDF4')
+
+    # define axis size
+    ncout.createDimension('time', T)  
+    ncout.createDimension('x', nx)
+    ncout.createDimension('y', ny)
+    ncout.createDimension('z', nz)
+
+    # create time axis
+    time = ncout.createVariable('time', np.dtype('double').char, ('time',))
+    time.long_name = 'time'
+    time.units = 'sec'
+    # time.calendar = 'standard'
+    time.axis = 'T'
+
+    # create latitude axis
+    x = ncout.createVariable('x', np.dtype('int16').char, ('x'))
+    x.standard_name = 'x'
+    x.long_name = 'x axis'
+    x.units = 'meter'
+    x.axis = 'X'
+
+    # create longitude axis
+    y = ncout.createVariable('y', np.dtype('int16').char, ('y'))
+    y.standard_name = 'y'
+    y.long_name = 'y axis'
+    y.units = 'meters'
+    y.axis = 'Y'
+
+    # create z axis
+    z = ncout.createVariable('z', np.dtype('int16').char, ('z'))
+    z.standard_name = 'z'
+    z.long_name = 'z axis'
+    z.units = 'level'
+    z.axis = 'z'
+
+    # copy axis from original dataset
+    time[:] = np.arange(0,T)
+    z[:] = np.arange(0,nz)
+    y[:] = np.arange(0,ny)
+    x[:] = np.arange(0,nx)
+    
+    # create variable array 
+    vout = ncout.createVariable(var, np.dtype('double').char, ('time','z', 'y', 'x'))
+    vout.long_name = var
+    vout.units = var
+    vout[:,:,:,:] = data
+
+    ncout.close()
 
 def split_train_val(input_ds, batch_size):
     '''
