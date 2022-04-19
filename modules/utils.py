@@ -1,4 +1,4 @@
-import pandas as df
+import pandas as pd
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,7 +16,9 @@ from pathlib import Path
 os.chdir(Path(sys.path[0]).parent)
 
 
-def print_one_alt(path_data,color):
+
+
+def print_one_alt(path_data,var,color):
     '''
     ## Description
     print first altitude layer of a data file
@@ -32,7 +34,7 @@ def print_one_alt(path_data,color):
     arr = couche0.to_numpy()
     arr2 = arr.reshape(512, 512)
     plt.imshow(arr2 , cmap = color , interpolation = 'nearest' )
-    plt.title( "2-D Heat Map of tracer" )
+    plt.title(f"2-D Heat Map of {var}")
     plt.show()
 
 
@@ -112,7 +114,7 @@ def write_nc_file(data,coarsening_factor,var,nz=376):
     len_sample = len(var*nz)
 
     # open a netCDF file to write
-    ncout = Dataset('data/input_dataset_L_'+coarsening_factor+'.nc', 'w', format='NETCDF4')
+    ncout = Dataset('data/input_ds_for_simple_nn_L_'+coarsening_factor+'.nc', 'w', format='NETCDF4')
 
     # define axis size
     ncout.createDimension('index', n_samples)  
@@ -163,7 +165,7 @@ def write_coarse_file(data,coarsening_factor,var,nz=376):
     ncout.createDimension('z', nz)
 
     # create time axis
-    time = ncout.createVariable('time', np.dtype('double').char, ('time',))
+    time = ncout.createVariable('time', np.dtype('int16').char, ('time',))
     time.long_name = 'time'
     time.units = 'sec'
     # time.calendar = 'standard'

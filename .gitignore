@@ -7,6 +7,9 @@
 # ignore data files
 /data
 /Sara
+/tests
+/.vscode
+.DS_Store
 
 # User-specific files
 *.rsuser
@@ -353,3 +356,5 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+.DS_Store
