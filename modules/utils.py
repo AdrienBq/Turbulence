@@ -38,7 +38,7 @@ def print_one_alt(path_data,var,color):
     plt.show()
 
 
-def concatenate_alt(dir, variable, t):
+def concatenate_alt(i,dir,variable,t,sync=True):
     '''
     ## Description
     Concatenate all files in a directory over the altitude axis for a given instant
@@ -71,7 +71,10 @@ def concatenate_alt(dir, variable, t):
         arr2 = df_init.values.reshape(lengths[0],lengths[1],lengths[2],lengths[3])
         arr = np.concatenate((arr,arr2),axis=1)
 
-    return arr
+    if sync :
+        return arr
+    else :
+        return (i,arr)
 
 
 def concatenate_time(dir,variable):
@@ -97,7 +100,7 @@ def concatenate_time(dir,variable):
         
     return tot_arr
 
-def write_nc_file(data,coarsening_factor,var,nz=376):
+def write_nc_file(data,coarsening_factor,var,time,nz=376):
     '''
     ## Description
     Write a netCDF file from a numpy array.
@@ -114,7 +117,7 @@ def write_nc_file(data,coarsening_factor,var,nz=376):
     len_sample = len(var*nz)
 
     # open a netCDF file to write
-    ncout = Dataset('data/input_ds_for_simple_nn_L_'+coarsening_factor+'.nc', 'w', format='NETCDF4')
+    ncout = Dataset(f'data/input_ds_for_simple_nn_T{time}_L_{coarsening_factor}.nc', 'w', format='NETCDF4')
 
     # define axis size
     ncout.createDimension('index', n_samples)  
@@ -241,11 +244,30 @@ def coarse_array(ds, L):
                     coarse_ds[t,z,i,j] = np.mean(ds[t,z,i*L:(i+1)*L,j*L:(j+1)*L])
     return coarse_ds
 
-
-def variable_samples(ds,L):
+def coarse_array2(i,ds, L):
     '''
     ## Description
-    Get the samples of a dataset over the altitude axis.
+    Coarsen a dataset over the altitude and time axis.
+    The new shape is (time, altitude, y, x) where y and x are divided by L.
+
+    ## Parameters
+    - ds (np array) : dataset to coarsen
+    - L (int) : coarsening factor
+    '''
+    #initialize coarse array
+    coarse_ds = np.zeros((ds.shape[0], ds.shape[1], int(ds.shape[2]/L), int(ds.shape[3]/L)))
+    for t in range(ds.shape[0]):
+        for z in range(ds.shape[1]):
+            for i in range(int(ds.shape[2]/L)):
+                for j in range(int(ds.shape[3]/L)):
+                    coarse_ds[t,z,i,j] = np.mean(ds[t,z,i*L:(i+1)*L,j*L:(j+1)*L])
+    return (i,coarse_ds)
+
+
+def variable_samples(ds_coarse):
+    '''
+    ## Description
+    Get the samples of a coarse_dataset over the altitude axis.
     The new shape is (time*y*x, z) where y and x are the horizontal dimensions divided by L.
 
     ## Parameters
@@ -253,7 +275,6 @@ def variable_samples(ds,L):
     - L (int) : coarsening factor
     '''
     #initialize coarse array
-    ds_coarse = coarse_array(ds, L)
     samples = np.zeros((ds_coarse.shape[0]*ds_coarse.shape[2]*ds_coarse.shape[3], ds_coarse.shape[1]))
     for t in range(ds_coarse.shape[0]):
         for i in range(ds_coarse.shape[2]):
@@ -288,10 +309,10 @@ def reconstruct_arrays(arr, n_features, L):
     return arr_reconstructed
 
 
-def input_dataset(dir,variables,L):
+def input_dataset(datasets):
     '''
     ## Description
-    Create a dataset of the variables in the list variables.
+    Creates an input dataset for a nn from coarse datasets in the list variables.
     The new shape is (time*y*x, altitude*nbvar).
 
     ## Parameters
@@ -299,10 +320,10 @@ def input_dataset(dir,variables,L):
     - variables (list) : list of variables to include in the dataset
     - L (int) : coarsening factor
     '''
-    l = len(variables)
+    l = len(datasets)
     assert l!=0, 'variables list is empty'
     #initialize dataset
-    ds = variable_samples(concatenate_time(dir, variables[0]), L)
+    ds = variable_samples(datasets[0])
     for var in range(1,l):
-        ds = np.concatenate((ds,variable_samples(concatenate_time(dir, variables[var]),L)), axis=1)
+        ds = np.concatenate((ds,variable_samples(datasets[var])), axis=1)
     return ds
