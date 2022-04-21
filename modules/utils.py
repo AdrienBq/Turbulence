@@ -7,7 +7,7 @@ import re
 
 from tqdm import tqdm, trange
 from netCDF4 import Dataset
-import netCDF4 as nc4
+import netCDF4 as nc
 
 import os
 import sys
@@ -18,7 +18,7 @@ os.chdir(Path(sys.path[0]).parent)
 
 #--------------PRINT FUNCTIONS-----------------------
 
-def print_one_alt(path_data,var,color):
+def print_one_alt(path_data,var,alt,color='RdBu_r'):
     '''
     ## Description
     print first altitude layer of a data file
@@ -27,13 +27,10 @@ def print_one_alt(path_data,var,color):
     - path_data (str) : path to the data file to be plotted
     - color (str) : colormap of the plot
     '''
-    ds_init = xr.open_dataset(path_data)
-    df_init = ds_init.to_dataframe()
-    df_init.reset_index(inplace=True)
-    couche0 = df_init[df_init['z']==0].drop(columns=['t','x','y','z'])
-    arr = couche0.to_numpy()
-    arr2 = arr.reshape(512, 512)
-    plt.imshow(arr2 , cmap = color , interpolation = 'nearest' )
+    nc_init = nc.Dataset(path_data)
+    arr = nc_init[f'{var}xy{alt}'][:].filled()[0,0,:,:]
+    im = plt.imshow(arr , cmap = color , interpolation = 'nearest' )
+    plt.colorbar(im)
     plt.title(f"2-D Heat Map of {var}")
     plt.show()
 
@@ -92,18 +89,14 @@ def concatenate_alt(dir,variable,t,i=0,sync=True):
 
     #initialize array
     path_data = os.path.join(dir, files[0])
-    ds_init = xr.open_dataset(path_data)
-    df_init = ds_init.to_dataframe()
-    lengths = [len(df_init.index.levels[i]) for i in range(4)]
-    arr = df_init.values.reshape(lengths[0],lengths[1],lengths[2],lengths[3])
+    nc_init = nc.Dataset(path_data)
+    arr = nc_init[f'{variable}xy0'][:].filled()[:,:,:,:]
 
     # concatenate
     for z in range(1,lz):
         path_data = os.path.join(dir, files[z])
-        ds_init = xr.open_dataset(path_data)
-        df_init = ds_init.to_dataframe()
-        lengths = [len(df_init.index.levels[i]) for i in range(4)]
-        arr2 = df_init.values.reshape(lengths[0],lengths[1],lengths[2],lengths[3])
+        nc_init = nc.Dataset(path_data)
+        arr2 = nc_init[f'{variable}xy{z+1}'][:].filled()[:,:,:,:]
         arr = np.concatenate((arr,arr2),axis=1)
 
     if sync :
