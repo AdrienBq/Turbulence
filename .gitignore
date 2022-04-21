@@ -10,6 +10,9 @@
 /tests
 /.vscode
 .DS_Store
+modules/not_used.py
+explo/local_simple_dnn.ipynb
+/explo/models
 
 # User-specific files
 *.rsuser
@@ -356,5 +359,3 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
-
-.DS_Store
