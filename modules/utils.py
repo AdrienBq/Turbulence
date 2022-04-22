@@ -84,8 +84,8 @@ def concatenate_alt(dir,variable,t,i=0,sync=True):
     files = [name for name in os.listdir(dir) if  name.__contains__(f"{variable}xy") and name.__contains__(f"_T{t}.nc")]
     lz = len(files)
 
-    assert lz!=0, "there is no file for this variable and time instant"
-    files.sort()
+    assert lz!=0, f"there is no file for this variable {variable} and time {t} instant"
+    files.sort(key=lambda x: int(x.split(f"{variable}xy")[1].split(f"_T{t}.nc")[0]))
 
     #initialize array
     path_data = os.path.join(dir, files[0])
@@ -96,7 +96,7 @@ def concatenate_alt(dir,variable,t,i=0,sync=True):
     for z in range(1,lz):
         path_data = os.path.join(dir, files[z])
         nc_init = nc.Dataset(path_data)
-        arr2 = nc_init[f'{variable}xy{z+1}'][:].filled()[:,:,:,:]
+        arr2 = nc_init[f'{variable}xy{z}'][:].filled()[:,:,:,:]
         arr = np.concatenate((arr,arr2),axis=1)
 
     if sync :
@@ -208,7 +208,7 @@ def write_nc_file(data,coarsening_factor,var,time,nz=376):
     len_sample = len(var*nz)
 
     # open a netCDF file to write
-    ncout = Dataset(f'data/L_{coarsening_factor}/input_ds_for_simple_nn_T{time}_L_{coarsening_factor}.nc', 'w', format='NETCDF4')
+    ncout = Dataset(f'data/L_{coarsening_factor}_new/input_ds_for_simple_nn_T{time}_L_{coarsening_factor}.nc', 'w', format='NETCDF4')
 
     # define axis size
     ncout.createDimension('index', n_samples)  
