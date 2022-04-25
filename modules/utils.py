@@ -59,11 +59,11 @@ def plot_output(pred_ds,true_ds,L,z,color='RdBu'):
     fig, (ax1, ax2) = plt.subplots(figsize=(11, 5), ncols=2)
     
     pred = ax1.imshow(pred_z, cmap=color, interpolation='nearest')
-    fig.colorbar(pred, ax=ax1)
+    fig.colorbar(pred, ax=ax1,orientation='vertical', fraction=0.046, pad=0.04)
     ax1.set_title(f"2-D Heat Map of heat-flux predictions at Altitude {z}")
     
     true = ax2.imshow(true_z, cmap=color, interpolation='nearest')
-    fig.colorbar(true, ax=ax2)
+    fig.colorbar(true, ax=ax2, orientation='vertical', fraction=0.046, pad=0.04)
     ax2.set_title(f"2-D Heat Map of the true heat-flux at Altitude {z}")
     
     plt.show()
@@ -90,13 +90,13 @@ def concatenate_alt(dir,variable,t,i=0,sync=True):
     #initialize array
     path_data = os.path.join(dir, files[0])
     nc_init = nc.Dataset(path_data)
-    arr = nc_init[f'{variable}xy0'][:].filled()[:,:,:,:]
+    arr = nc_init[f'{variable}xy18'][:].filled()[:,:,:,:]       # modif xy0 if 0 is not first altitude layer
 
     # concatenate
     for z in range(1,lz):
         path_data = os.path.join(dir, files[z])
         nc_init = nc.Dataset(path_data)
-        arr2 = nc_init[f'{variable}xy{z}'][:].filled()[:,:,:,:]
+        arr2 = nc_init[f'{variable}xy{z+18}'][:].filled()[:,:,:,:]     # add number of first alt layer to z if 0 is not first altitude layer
         arr = np.concatenate((arr,arr2),axis=1)
 
     if sync :
@@ -202,13 +202,13 @@ def write_nc_file(data,coarsening_factor,var,time,nz=376):
     - var (list of strings) : names of the variables
     - nz (int) : number of altitude layers
     '''
-    print ('writing out')
+    print (f'writing out time {time}')
     
     n_samples = data.shape[0]
     len_sample = len(var*nz)
 
     # open a netCDF file to write
-    ncout = Dataset(f'data/L_{coarsening_factor}_new/input_ds_for_simple_nn_T{time}_L_{coarsening_factor}.nc', 'w', format='NETCDF4')
+    ncout = Dataset(f'data/input_ds_for_simple_nn_T{time}_L_{coarsening_factor}.nc', 'w', format='NETCDF4')
 
     # define axis size
     ncout.createDimension('index', n_samples)  
