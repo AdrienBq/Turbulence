@@ -91,12 +91,14 @@ def concatenate_alt(dir,variable,t,i=0,sync=True):
     path_data = os.path.join(dir, files[0])
     nc_init = nc.Dataset(path_data)
     arr = nc_init[f'{variable}xy0'][:].filled()[:,:,:,:]       # modif xy0 if 0 is not first altitude layer
+    # arr[0] = arr[0] - arr[0].mean(axis=(1,2)
 
     # concatenate
     for z in range(1,lz):
         path_data = os.path.join(dir, files[z])
         nc_init = nc.Dataset(path_data)
         arr2 = nc_init[f'{variable}xy{z+0}'][:].filled()[:,:,:,:]     # add number of first alt layer to z if 0 is not first altitude layer
+        # arr2[0] = arr2[0] - arr2[0].mean(axis=(1,2)
         arr = np.concatenate((arr,arr2),axis=1)
 
     if sync :
@@ -202,7 +204,7 @@ def write_nc_file(data,coarsening_factor,var,time,nz=376):
     - var (list of strings) : names of the variables
     - nz (int) : number of altitude layers
     '''
-    print (f'writing out time {time}')
+    #print (f'writing out time {time}')
     
     n_samples = data.shape[0]
     len_sample = len(var*nz)
@@ -227,7 +229,7 @@ def write_nc_file(data,coarsening_factor,var,time,nz=376):
     # create variable array
     vout = ncout.createVariable('sample', np.dtype('double').char, ('index','i'))
     vout[:,:] = data
-
+    
     ncout.close()
 
 #-------------SPLIT TRAIN-TEST-----------------------------------------
