@@ -56,16 +56,21 @@ def plot_output(pred_ds,true_ds,L,z,color='RdBu'):
     pred_z = pred_ds[:,z].reshape((exp_shapex,exp_shapey))
     true_z = true_ds[:,z].reshape((exp_shapex,exp_shapey))
     
-    fig, (ax1, ax2) = plt.subplots(figsize=(11, 5), ncols=2)
+    fig, (ax1, ax2, ax3) = plt.subplots(figsize=(16, 4), ncols=3)
     
-    pred = ax1.imshow(pred_z, cmap=color, interpolation='nearest')
-    fig.colorbar(pred, ax=ax1,orientation='vertical', fraction=0.046, pad=0.04)
-    ax1.set_title(f"2-D Heat Map of heat-flux predictions at Altitude {z}")
+    true = ax1.imshow(true_z, cmap=color, interpolation='nearest')
+    fig.colorbar(true, ax=ax1, orientation='vertical', fraction=0.046, pad=0.04)
+    ax1.set_title(f"2-D Heat Map of the true heat-flux at Altitude {z}")
+
+    pred = ax2.imshow(pred_z, cmap=color, interpolation='nearest')
+    fig.colorbar(pred, ax=ax2,orientation='vertical', fraction=0.046, pad=0.04)
+    ax2.set_title(f"2-D Heat Map of heat-flux predictions at Altitude {z}")
     
-    true = ax2.imshow(true_z, cmap=color, interpolation='nearest')
-    fig.colorbar(true, ax=ax2, orientation='vertical', fraction=0.046, pad=0.04)
-    ax2.set_title(f"2-D Heat Map of the true heat-flux at Altitude {z}")
+    diff = ax3.imshow(np.abs(true_z-pred_z), cmap=color, interpolation='nearest')
+    fig.colorbar(diff, ax=ax3, orientation='vertical', fraction=0.046, pad=0.04)
+    ax3.set_title(f"Abs difference between true and pred heat-flux")
     
+    plt.tight_layout()
     plt.show()
 
 #-------------CONCATENATE AND COARSE GRAIN-------------------------------

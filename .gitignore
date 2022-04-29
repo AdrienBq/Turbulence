@@ -6,6 +6,7 @@
 # Project files
 # ignore data files
 /data
+/images
 /Sara
 /tests
 /.vscode
