@@ -215,7 +215,7 @@ def write_nc_file(data,coarsening_factor,var,time,nz=376):
     len_sample = len(var*nz)
 
     # open a netCDF file to write
-    ncout = Dataset(f'data/L_32/input_ds_for_simple_nn_T{time}_L_{coarsening_factor}.nc', 'w', format='NETCDF4')
+    ncout = Dataset(f'data/L_{coarsening_factor}/input_ds_for_simple_nn_T{time}_L_{coarsening_factor}.nc', 'w', format='NETCDF4')
 
     # define axis size
     ncout.createDimension('index', n_samples)  
