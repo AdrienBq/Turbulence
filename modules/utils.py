@@ -13,6 +13,10 @@ import os
 import sys
 from pathlib import Path
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 os.chdir(Path(sys.path[0]).parent)
 
 
@@ -239,7 +243,7 @@ def write_nc_file(data,coarsening_factor,var,time,nz=376):
 
 #-------------SPLIT TRAIN-TEST-----------------------------------------
 
-def split_train_val(input_ds, batch_size):
+def split_train_val_vieux(input_ds, batch_size):
     '''
     ## Description
     Split the dataset into training and validation sets.
@@ -253,3 +257,80 @@ def split_train_val(input_ds, batch_size):
     train, val = input_ds[:int((n//batch_size)*0.8)*batch_size], input_ds[int((n//batch_size)*0.8)*batch_size:]
 
     return train, val
+
+def split_times(tmin,tmax,model_number):
+    '''
+    ## Description
+    Split the times into training and test lists of times.
+
+    ## Parameters
+    - tmin (int) : first instant, usually 1
+    - tmax (int) : last instant
+    - model_number : number of the model trained with this split
+    '''
+    times = [i for i in range(1,63)]
+    perm = np.random.permutation(times)
+    train_times = perm[:int(0.8*len(times))]
+    test_times = perm[int(0.8*len(times)):]
+
+    df_timetrain = pd.DataFrame([train_times]).T
+    df_timetrain.columns = ['train']
+    df_timetrain.to_csv(f'data/test_train_times/times_train_{model_number}.csv') 
+
+    df_timetest = pd.DataFrame([test_times]).T
+    df_timetest.columns = ['test']
+    df_timetest.to_csv(f'data/test_train_times/times_test_{model_number}.csv')
+
+def make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory):
+    '''
+    # Description
+    Make the training and test datasets.
+
+    # Parameters
+    - coarse_factors (list) : list of coarsening factors
+    - len_in (int) : length of the input dataset
+    - train_times (list) : list of training times
+    - test_times (list) : list of test times
+    - Directory (string) : directory where to find the datasets (ex : data)
+    '''
+    #init train ds
+    path_data = Directory+f'/L_{coarse_factors[0]}/input_ds_for_simple_nn_T{train_times[0]}_L_{coarse_factors[0]}.nc'
+    nc_init = nc.Dataset(path_data)
+    train_ds = nc_init['sample'][:].filled()
+
+    for L in coarse_factors :
+        for t in train_times :
+            if L == coarse_factors[0] and t == train_times[0] :
+                continue
+            path_data = Directory+f'/L_{L}/input_ds_for_simple_nn_T{t}_L_{L}.nc'
+            nc_init = nc.Dataset(path_data)
+            time_ds = nc_init['sample'][:].filled()
+            train_ds = np.concatenate((train_ds, time_ds), axis=0)
+
+    #init test ds
+    path_data = Directory+f'/L_{coarse_factors[0]}/input_ds_for_simple_nn_T{test_times[0]}_L_{coarse_factors[0]}.nc'
+    nc_init = nc.Dataset(path_data)
+    test_ds = nc_init['sample'][:].filled()
+
+    for L in coarse_factors :
+        for t in test_times:
+            if L == coarse_factors[0] and t == test_times[0] :
+                continue
+            path_data = Directory+f'/L_{L}/input_ds_for_simple_nn_T{t}_L_{L}.nc'
+            nc_init = nc.Dataset(path_data)
+            time_ds = nc_init['sample'][:].filled()
+            test_ds = np.concatenate((test_ds, time_ds), axis=0)
+
+    # split train and test ds in input-output datasets
+    input_train, output_train, input_val, output_val = train_ds[:,:len_in], train_ds[:,len_in:], test_ds[:,:len_in], test_ds[:,len_in:]
+    input_train.shape
+
+    # train : convert numpy array to torch tensor
+    input = torch.from_numpy(input_train).float()
+    output = torch.from_numpy(output_train).float()
+
+    # test : convert numpy array to torch tensor
+    input_test = torch.from_numpy(input_val).float()
+    output_test = torch.from_numpy(output_val).float()
+
+    return input, output, input_test, output_test
