@@ -334,3 +334,62 @@ def make_train_test_ds(coarse_factors, len_in, train_times, test_times, Director
     output_test = torch.from_numpy(output_val).float()
 
     return input, output, input_test, output_test
+
+
+#-------------LAYER-WISE RELEVANT PROPAGATION-----------------------------------------
+
+def rho(w,l):  return w #+ [None,0.1,0.0,0.0][l] * np.maximum(0,w)
+def incr(z,l): return z #+ [None,0.0,0.1,0.0][l] * (z**2).mean()**.5+1e-9
+
+def lrp(model,input,output,z):
+    '''
+    ## Description
+    Layer-wise relevance propagation for a model taking the altitude as input and outputing the predicted heat flux at a single altitude.
+
+    ## Parameters
+    - model (torch.nn.Module) : model to propagate
+    - input (np.array) : input to the model
+    - output (np.array) : output of the model
+    - z (int) : altitude
+    '''
+    T = output[z].numpy()
+    X = torch.cat((input, torch.ones(1)*z), 0).numpy()
+    W = []
+    B=[]
+
+    for param_tensor in model.state_dict():
+        if param_tensor.__contains__("weight"):
+            W.append(model.state_dict()[param_tensor].cpu().detach().numpy())
+        if param_tensor.__contains__("bias"):
+            B.append(model.state_dict()[param_tensor].cpu().detach().numpy())
+    L = len(W)    
+
+    A = [X]+[None]*L
+    for l in range(L):
+        A[l+1] = np.maximum(0,A[l].dot(W[l].T)+B[l])
+    
+    R = [None]*L + [A[L]*T]
+
+    for l in range(1,L)[::-1]:
+        w = rho(W[l],l)
+        b = rho(B[l],l)
+        
+        z = incr(A[l].dot(w.T)+b,l)   # step 1
+        #z= z.reshape(z.shape[0])
+        s = R[l+1] / z                # step 2
+        c = s.dot(w)               # step 3
+        R[l] = A[l]*c                # step 4
+
+    w  = W[0]
+    wp = np.maximum(0,w)
+    wm = np.minimum(0,w)
+    lb = A[0]*0-1
+    hb = A[0]*0+1
+
+    z = A[0].dot(w.T)-lb.dot(wp.T)-hb.dot(wm.T)+1e-9    # step 1
+    s = R[1]/z                                          # step 2
+    c,cp,cm  = s.dot(w),s.dot(wp),s.dot(wm)             # step 3
+    R[0] = A[0]*c-lb*cp-hb*cm                           # step 4
+
+    plot_ds = R[0][:-1].reshape(376,6)
+    return plot_ds
