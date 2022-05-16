@@ -341,7 +341,7 @@ def make_train_test_ds(coarse_factors, len_in, train_times, test_times, Director
 def rho(w,l):  return w #+ [None,0.1,0.0,0.0][l] * np.maximum(0,w)
 def incr(z,l): return z #+ [None,0.0,0.1,0.0][l] * (z**2).mean()**.5+1e-9
 
-def lrp(model,input,output,z):
+def lrp(model,input,z,one_alt=True):
     '''
     ## Description
     Layer-wise relevance propagation for a model taking the altitude as input and outputing the predicted heat flux at a single altitude.
@@ -352,8 +352,12 @@ def lrp(model,input,output,z):
     - output (np.array) : output of the model
     - z (int) : altitude
     '''
-    T = output[z].numpy()
-    X = torch.cat((input, torch.ones(1)*z), 0).numpy()
+    if one_alt:
+        X = torch.cat((input, torch.ones(1)*z), 0)
+    else:
+        X = input
+    Y = model(X).detach().numpy()
+    X = X.numpy()
     W = []
     B=[]
 
@@ -366,9 +370,15 @@ def lrp(model,input,output,z):
 
     A = [X]+[None]*L
     for l in range(L):
-        A[l+1] = np.maximum(0,A[l].dot(W[l].T)+B[l])
-    
-    R = [None]*L + [A[L]*T]
+        if l!=L-1:
+            A[l+1] = np.maximum(0,A[l].dot(W[l].T)+B[l])
+        else:
+            A[l+1] = A[l].dot(W[l].T)+B[l]
+        #print(A[l].max(),A[l].min())
+
+    #print(A[L].max(),A[L].min())
+    R = [None]*L + [A[L]*Y]
+    #print(R[L].max(),R[L].min())
 
     for l in range(1,L)[::-1]:
         w = rho(W[l],l)
@@ -379,7 +389,11 @@ def lrp(model,input,output,z):
         s = R[l+1] / z                # step 2
         c = s.dot(w)               # step 3
         R[l] = A[l]*c                # step 4
+        #print(l,R[l].max(), R[l].min())
 
+    #first layer : original inputs
+
+    #print(A[0].max())
     w  = W[0]
     wp = np.maximum(0,w)
     wm = np.minimum(0,w)
@@ -387,9 +401,16 @@ def lrp(model,input,output,z):
     hb = A[0]*0+1
 
     z = A[0].dot(w.T)-lb.dot(wp.T)-hb.dot(wm.T)+1e-9    # step 1
+    #print(z.max(), z.min())
     s = R[1]/z                                          # step 2
+    #print(s.max(), s.min())
     c,cp,cm  = s.dot(w),s.dot(wp),s.dot(wm)             # step 3
-    R[0] = A[0]*c-lb*cp-hb*cm                           # step 4
+    #print(c.max(), c.min(), cp.max(), cp.min(), cm.max(), cm.min())
+    R[0] = A[0]*c-lb*cp-hb*cm 
+    #print(R[0].max())                          # step 4
 
-    plot_ds = R[0][:-1].reshape(376,6)
+    if one_alt:
+        plot_ds = R[0][:-1].reshape(376,6)
+    else:
+        plot_ds = R[0].reshape(376,6)
     return plot_ds
