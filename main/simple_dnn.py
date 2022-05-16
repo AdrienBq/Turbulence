@@ -9,12 +9,16 @@ import os
 import sys
 from pathlib import Path
 
+print()
 os.chdir(Path(sys.path[0]).parent)
-import Turbulence.modules.utils as utils
+print(Path(sys.path[0]).parent)
+import modules.utils as utils
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+print('cuda available : ', torch.cuda.is_available())
 
 
 class DNN(nn.Module):
