@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 os.chdir(Path(sys.path[0]).parent)
-import modules.utils as utils
+import Turbulence.modules.utils as utils
 
 import torch
 import torch.nn as nn
