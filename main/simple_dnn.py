@@ -9,11 +9,10 @@ import os
 import sys
 from pathlib import Path
 
-print(sys.path[0])
-search_path = Path(sys.path[0]).parent
+search_path = os.path.join(Path(sys.path[0]).parent,'modules')
 os.chdir(search_path)
 print(search_path)
-import modules.utils as utils
+import utils
 
 import torch
 import torch.nn as nn
