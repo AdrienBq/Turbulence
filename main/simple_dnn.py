@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 print()
-os.chdir(Path(sys.path[0]).parent)
+os.chdir(Path(sys.path[0]).parent.modules)
 print(Path(sys.path[0]).parent)
 import modules.utils as utils
 
