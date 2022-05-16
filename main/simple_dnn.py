@@ -12,7 +12,7 @@ from pathlib import Path
 search_path = os.path.join(Path(sys.path[0]).parent, 'modules')
 os.chdir(search_path)
 print(search_path)
-import utils as utils
+import modules.utils as utils
 
 import torch
 import torch.nn as nn
