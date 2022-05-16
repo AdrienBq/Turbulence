@@ -96,7 +96,7 @@ def train(learning_rates, nb_epochs, models, train_losses, test_losses, input_tr
 
 def main():
     coarse_factors = [32]
-    Directory = f"data"
+    Directory = "data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
     nz=376
