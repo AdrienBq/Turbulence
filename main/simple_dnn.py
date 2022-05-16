@@ -9,7 +9,8 @@ import os
 import sys
 from pathlib import Path
 
-search_path = os.path.join(Path(sys.path[0]).parent, 'modules')
+print(sys.path[0])
+search_path = Path(sys.path[0]).parent
 os.chdir(search_path)
 print(search_path)
 import modules.utils as utils
