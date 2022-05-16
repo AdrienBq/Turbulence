@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 print(sys.path[0])
-search_path = os.path.join(sys.path[0],'Turbulence')
+search_path = Path(sys.path[0])
 os.chdir(search_path)
 print(search_path)
 import modules.utils as utils
