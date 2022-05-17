@@ -17,7 +17,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-os.chdir(Path(sys.path[0]).parent)
+#os.chdir(Path(sys.path[0]).parent)
 
 
 #--------------PRINT FUNCTIONS-----------------------

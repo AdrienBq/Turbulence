@@ -1,18 +1,13 @@
 import pandas as pd
-import xarray as xr
 import numpy as np
-import matplotlib.pyplot as plt
-from tqdm import tqdm, trange
-import netCDF4 as nc
+from tqdm import trange
 
 import os
 import sys
 from pathlib import Path
 
-search_path = os.path.join(Path(sys.path[0]).parent,'modules')
-os.chdir(search_path)
-print(search_path)
-import utils
+sys.path[0] = str(Path(sys.path[0]).parent)
+import modules.utils as utils
 
 import torch
 import torch.nn as nn
@@ -116,6 +111,7 @@ def main():
     path_times_train = f'data/test_train_times/times_train_{model_number}.csv'
     path_times_test = f'data/test_train_times/times_test_{model_number}.csv'
     isFile = os.path.isfile(path_times_train) and os.path.isfile(path_times_test)
+    print(isFile)
 
     if not isFile :
         utils.split_times(tmin,tmax,model_number)
@@ -149,7 +145,7 @@ def main():
     train(learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out)
 
     for i in range(len(models)):
-        torch.save(models[i].state_dict(), f"models/model_bash_{i}.pt")
+        torch.save(models[i].state_dict(), f"explo/models/model_bash_{i}.pt")
 
 
 if __name__ == '__main__':
