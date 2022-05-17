@@ -268,6 +268,7 @@ def split_times(tmin,tmax,model_number):
     - tmax (int) : last instant
     - model_number : number of the model trained with this split
     '''
+    print(os.getcwd())
     times = [i for i in range(1,63)]
     perm = np.random.permutation(times)
     train_times = perm[:int(0.8*len(times))]

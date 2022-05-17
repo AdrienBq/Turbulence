@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
 
 
