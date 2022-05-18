@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from tqdm import trange
+import matplotlib.pyplot as plt
 
 import os
 import sys
@@ -157,6 +158,16 @@ def main():
 
     for i in range(len(models)):
         torch.save(models[i].state_dict(), f"explo/models/model_bash_{i}.pt")
+
+    fig,axes = plt.subplots(1,len(learning_rates),figsize=(20,4))
+
+    for i in range(len(learning_rates)):
+        axes[i].plot(train_losses[i][5:], label="train")
+        axes[i].plot(test_losses[i][5:], label="test")
+        axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.99)")
+        axes[i].legend()
+
+    fig.saveplot(f"explo/images/losses_bash.png")
 
 
 if __name__ == '__main__':
