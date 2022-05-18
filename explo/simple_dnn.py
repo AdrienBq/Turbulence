@@ -62,6 +62,7 @@ def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, 
     for i in range(len(learning_rates)):
         model = DNN(batch_size=batch_size,input_size=len_in,output_size=len_out)
         model = model.to(device)
+        print(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rates[i])
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.985, last_epoch= -1)
         models.append(model)
@@ -72,10 +73,13 @@ def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, 
             tot_losses=0
             indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
             for i_batch in indexes_arr:
-                input_batch = input_train[i_batch,:]
-                output_batch = output_train[i_batch,:]
+                input_batch = input_train[i_batch,:].to(device)
+                output_batch = output_train[i_batch,:].to(device)
                 optimizer.zero_grad()
                 # forward pass
+                print('model device : ', model.device)
+                print('input_batch device : ', input_batch.device)
+                print('output_batch device : ', output_batch.device)
                 output_pred = model(input_batch)
                 # compute loss
                 loss = F.mse_loss(output_pred, output_batch, reduction='mean')
@@ -111,7 +115,7 @@ def main():
     tmin=1
     tmax=62+1
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('using cuda : ', torch.cuda.is_available())
 
     path_times_train = f'data/test_train_times/times_train_{model_number}.csv'
