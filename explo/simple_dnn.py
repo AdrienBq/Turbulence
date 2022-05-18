@@ -167,7 +167,7 @@ def main():
         axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.99)")
         axes[i].legend()
 
-    plt.saveplot(f"explo/images/losses_bash.png")
+    plt.savefig(f"explo/images/losses_bash.png")
 
 
 if __name__ == '__main__':
