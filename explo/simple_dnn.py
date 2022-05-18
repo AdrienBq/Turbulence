@@ -50,12 +50,12 @@ class DNN(nn.Module):
     def forward(self, x):
         return self.regression(x)
 
-def test(model, input_test, output_test):
+def test(model, device, input_test, output_test):
     model.eval()                                    # on a une loss en moyenne 2 fois plus petite
     # prediction
-    output_pred = model(input_test)
+    output_pred = model(input_test.to(device))
     # compute loss
-    test_loss = F.mse_loss(output_pred, output_test, reduction='mean')
+    test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
     return test_loss.item()
 
 def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out):
@@ -77,9 +77,8 @@ def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, 
                 output_batch = output_train[i_batch,:].to(device)
                 optimizer.zero_grad()
                 # forward pass
-                #print('model device : ', model.get_device())
-                print('input_batch device : ', input_batch.get_device())
-                print('output_batch device : ', output_batch.get_device())
+                #print('input_batch device : ', input_batch.get_device())
+                #print('output_batch device : ', output_batch.get_device())
                 output_pred = model(input_batch)
                 # compute loss
                 loss = F.mse_loss(output_pred, output_batch, reduction='mean')
@@ -91,7 +90,7 @@ def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, 
             #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                               # on a une loss en moyenne 2 fois plus petite
 
-            test_losses_i.append(test(model, input_test, output_test))
+            test_losses_i.append(test(model, device, input_test, output_test))
 
             if epoch < 200:
                 scheduler.step()
@@ -121,7 +120,7 @@ def main():
     path_times_train = f'data/test_train_times/times_train_{model_number}.csv'
     path_times_test = f'data/test_train_times/times_test_{model_number}.csv'
     isFile = os.path.isfile(path_times_train) and os.path.isfile(path_times_test)
-    print(isFile)
+    #print(isFile)
 
     if not isFile :
         utils.split_times(tmin,tmax,model_number)
