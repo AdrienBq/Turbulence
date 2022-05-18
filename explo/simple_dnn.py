@@ -77,9 +77,9 @@ def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, 
                 output_batch = output_train[i_batch,:].to(device)
                 optimizer.zero_grad()
                 # forward pass
-                print('model device : ', model.device)
-                print('input_batch device : ', input_batch.device)
-                print('output_batch device : ', output_batch.device)
+                #print('model device : ', model.get_device())
+                print('input_batch device : ', input_batch.get_device())
+                print('output_batch device : ', output_batch.get_device())
                 output_pred = model(input_batch)
                 # compute loss
                 loss = F.mse_loss(output_pred, output_batch, reduction='mean')
