@@ -58,9 +58,10 @@ def test(model, input_test, output_test):
     test_loss = F.mse_loss(output_pred, output_test, reduction='mean')
     return test_loss.item()
 
-def train(learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out):
+def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out):
     for i in range(len(learning_rates)):
         model = DNN(batch_size=batch_size,input_size=len_in,output_size=len_out)
+        model = model.to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rates[i])
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.985, last_epoch= -1)
         models.append(model)
@@ -110,6 +111,9 @@ def main():
     tmin=1
     tmax=62+1
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print('using cuda : ', torch.cuda.is_available())
+
     path_times_train = f'data/test_train_times/times_train_{model_number}.csv'
     path_times_test = f'data/test_train_times/times_test_{model_number}.csv'
     isFile = os.path.isfile(path_times_train) and os.path.isfile(path_times_test)
@@ -131,10 +135,12 @@ def main():
             input[:,i] -= input[:,i].mean()
             input[:,i] /= input[:,i].std()
         input = input.reshape(-1,(len(variables)-1)*nz)
+        input = input.to(device)
 
     for output in outs:
         output -= output.mean()
         output /= output.std()
+        output = output.to(device)
 
     learning_rates = [1e-3, 1e-4, 1e-5]
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
@@ -144,7 +150,7 @@ def main():
     models=[]
     n_batches = input_train.shape[0]//batch_size
 
-    train(learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out)
+    train(device, learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out)
 
     for i in range(len(models)):
         torch.save(models[i].state_dict(), f"explo/models/model_bash_{i}.pt")
