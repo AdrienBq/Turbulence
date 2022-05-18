@@ -146,9 +146,9 @@ def main():
         output /= output.std()
         output = output.to(device)
 
-    learning_rates = [1e-3, 1e-4, 1e-5]
+    learning_rates = [1e-3, 1e-4, 5*1e-5]
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [100, 100, 100]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = [300, 300, 400]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
