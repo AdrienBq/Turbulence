@@ -148,7 +148,7 @@ def main():
 
     learning_rates = [5*1e-3, 1e-3]
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [250, 300]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = [20, 20]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -167,7 +167,7 @@ def main():
         axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.99)")
         axes[i].legend()
 
-    plt.savefig(f"explo/images/losses_bash.png")
+    plt.savefig(f"losses_bash.png")
 
 
 if __name__ == '__main__':
