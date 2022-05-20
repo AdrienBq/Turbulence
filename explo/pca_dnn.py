@@ -134,24 +134,27 @@ def main():
     ins = [input_train, input_test]
     outs = [output_train, output_test]
 
-    for input in ins:
+    for j in range(len(ins)):
+        input = ins[j]
         input = input.reshape(-1,len(variables)-1,nz)
         for i in range(len(variables)-1):
             input[:,i] -= input[:,i].mean()
             input[:,i] /= input[:,i].std()
         input = input.reshape(-1,(len(variables)-1)*nz)
         input = input.to(device)
+        ins[j] = input
 
-    for output in outs:
+    for i in range(len(outs)):
+        i in range(len(ins))
         output -= output.mean()
         output /= output.std()
         output = output.to(device)
+        outs[i] = output
 
-    U,S,V = torch.pca_lowrank(torch.concat((input_train, input_test), axis=0), q=reduced_len)
+    U,S,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
 
     for i in range(len(ins)) :
         ins[i] = torch.mm(ins[i], V)
-        print(ins[i].shape)   
 
     learning_rates = [1e-3, 1e-4, 1e-5, 1e-6]
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
