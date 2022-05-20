@@ -93,7 +93,7 @@ def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, 
 
             test_losses_i.append(test(model, device, input_test, output_test))
 
-            if epoch < 200:
+            if epoch < 300:
                 scheduler.step()
 
         train_losses.append(train_losses_i)
@@ -156,9 +156,9 @@ def main():
     for i in range(len(ins)) :
         ins[i] = torch.mm(ins[i], V)
 
-    learning_rates = [1e-3, 1e-4, 1e-5, 1e-6]
+    learning_rates = [1e-2,1e-3]
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [200, 200, 200, 200]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = [400,400]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -177,7 +177,7 @@ def main():
         axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.99)")
         axes[i].legend()
 
-    plt.savefig(f"explo/images/losses_pca.png")
+    plt.savefig(f"explo/images/losses_pca_2.png")
 
 
 if __name__ == '__main__':
