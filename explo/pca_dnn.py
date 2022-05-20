@@ -110,7 +110,7 @@ def main():
     len_samples = nz*len(variables)
     len_in = nz*(len(variables)-1)
     len_out = nz
-    reduced_len = 100
+    reduced_len = 30
 
     model_number = 11
     tmin=1
