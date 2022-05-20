@@ -20,7 +20,7 @@ print('cuda available : ', torch.cuda.is_available())
 
 
 class DNN(nn.Module):
-    def __init__(self, batch_size, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=1024, hidden_size2=512, hidden_size3=256):
+    def __init__(self, batch_size, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=256, hidden_size2=512, hidden_size3=256):
         super(DNN, self).__init__()
         self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Linear(input_size, hidden_size1),
@@ -110,6 +110,7 @@ def main():
     len_samples = nz*len(variables)
     len_in = nz*(len(variables)-1)
     len_out = nz
+    reduced_len = 100
 
     model_number = 11
     tmin=1
@@ -146,18 +147,24 @@ def main():
         output /= output.std()
         output = output.to(device)
 
-    learning_rates = [5*1e-3, 1e-3]
+    U,S,V = torch.pca_lowrank(torch.concat((input_train, input_test), axis=0), q=reduced_len)
+
+    for i in range(len(ins)) :
+        ins[i] = torch.mm(ins[i], V)
+        print(ins[i].shape)   
+
+    learning_rates = [1e-3, 1e-4, 1e-5, 1e-6]
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [300, 350]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = [200, 200, 200, 200]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
-    n_batches = input_train.shape[0]//batch_size
+    n_batches = ins[0].shape[0]//batch_size
 
-    train(device, learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out)
+    train(device, learning_rates, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], batch_size, n_batches, reduced_len, len_out)
 
     for i in range(len(models)):
-        torch.save(models[i].state_dict(), f"explo/models/model_bash_{i}.pt")
+        torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
 
     fig,axes = plt.subplots(1,len(learning_rates),figsize=(20,4))
 
@@ -167,7 +174,7 @@ def main():
         axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.99)")
         axes[i].legend()
 
-    plt.savefig(f"explo/images/losses_bash.png")
+    plt.savefig(f"explo/images/losses_pca.png")
 
 
 if __name__ == '__main__':
