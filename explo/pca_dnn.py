@@ -145,7 +145,7 @@ def main():
         ins[j] = input
 
     for i in range(len(outs)):
-        i in range(len(ins))
+        output = outs[i]
         output -= output.mean()
         output /= output.std()
         output = output.to(device)
