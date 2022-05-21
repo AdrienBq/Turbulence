@@ -162,7 +162,7 @@ def main():
     learning_rates = [1e-1,1e-2,1e-3]
     decays = [0.99]
     batch_sizes = [8,16,32,64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [150]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = [1]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -176,8 +176,8 @@ def main():
 
     for i in range(len(learning_rates)):
         for j in range(len(batch_sizes)*len(decays)):
-            axes[i,j].plot(train_losses[i*len(batch_sizes)*len(decays) + j][5:], label="train")
-            axes[i,j].plot(test_losses[i*len(batch_sizes)*len(decays) + j][5:], label="test")
+            axes[i,j].plot(train_losses[i*len(batch_sizes)*len(decays) + j][:], label="train")
+            axes[i,j].plot(test_losses[i*len(batch_sizes)*len(decays) + j][:], label="test")
             axes[i,j].set_title(f"lr = {learning_rates[i]}, decay = {decays[j//len(batch_sizes)]}, batch_size = {batch_sizes[j//len(decays)]}")
             axes[i,j].legend()
     plt.show()
