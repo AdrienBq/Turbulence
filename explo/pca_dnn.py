@@ -59,46 +59,49 @@ def test(model, device, input_test, output_test):
     test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
     return test_loss.item()
 
-def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out):
-    for i in range(len(learning_rates)):
-        model = DNN(batch_size=batch_size,input_size=len_in,output_size=len_out)
-        model = model.to(device)
-        print(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rates[i])
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.99, last_epoch= -1)
-        models.append(model)
-        train_losses_i = []
-        test_losses_i = []
-        for epoch in trange(nb_epochs[i], leave=False):
-            model.train()
-            tot_losses=0
-            indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
-            for i_batch in indexes_arr:
-                input_batch = input_train[i_batch,:].to(device)
-                output_batch = output_train[i_batch,:].to(device)
-                optimizer.zero_grad()
-                # forward pass
-                #print('input_batch device : ', input_batch.get_device())
-                #print('output_batch device : ', output_batch.get_device())
-                output_pred = model(input_batch)
-                # compute loss
-                loss = F.mse_loss(output_pred, output_batch, reduction='mean')
-                tot_losses += loss.item()
-                # backward pass
-                loss.backward()
-                optimizer.step()
-            train_losses_i.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
-            #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
-                                                              # on a une loss en moyenne 2 fois plus petite
+def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
+    for learning_rate in learning_rates:
+        for decay in decays:
+            for batch_size in batch_sizes :
+                n_batches = input_train.shape[0]//batch_size
+                model = DNN(batch_size=batch_size,input_size=len_in,output_size=len_out)
+                model = model.to(device)
+                print(device)
+                optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+                scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, decay, last_epoch= -1)
+                models.append(model)
+                train_losses_i = []
+                test_losses_i = []
+                for epoch in trange(nb_epochs[0], leave=False):
+                    model.train()
+                    tot_losses=0
+                    indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
+                    for i_batch in indexes_arr:
+                        input_batch = input_train[i_batch,:].to(device)
+                        output_batch = output_train[i_batch,:].to(device)
+                        optimizer.zero_grad()
+                        # forward pass
+                        #print('input_batch device : ', input_batch.get_device())
+                        #print('output_batch device : ', output_batch.get_device())
+                        output_pred = model(input_batch)
+                        # compute loss
+                        loss = F.mse_loss(output_pred, output_batch, reduction='mean')
+                        tot_losses += loss.item()
+                        # backward pass
+                        loss.backward()
+                        optimizer.step()
+                    train_losses_i.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
+                    #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
+                                                                    # on a une loss en moyenne 2 fois plus petite
 
-            test_losses_i.append(test(model, device, input_test, output_test))
+                    test_losses_i.append(test(model, device, input_test, output_test))
 
-            if epoch < 300:
-                scheduler.step()
+                    if epoch < 300:
+                        scheduler.step()
 
-        train_losses.append(train_losses_i)
-        test_losses.append(test_losses_i)
-        print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs[i], tot_losses/n_batches))
+                train_losses.append(train_losses_i)
+                test_losses.append(test_losses_i)
+                print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs[i], tot_losses/n_batches))
 
 def main():
     coarse_factors = [32]
@@ -156,28 +159,30 @@ def main():
     for i in range(len(ins)) :
         ins[i] = torch.mm(ins[i], V)
 
-    learning_rates = [1e-2,1e-3]
-    batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [400,400]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    learning_rates = [1e-1,1e-2,1e-3]
+    decays = [0.99]
+    batch_sizes = [8,16,32,64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    nb_epochs = [4]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
-    n_batches = ins[0].shape[0]//batch_size
 
-    train(device, learning_rates, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], batch_size, n_batches, reduced_len, len_out)
+    train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], reduced_len, len_out)
 
-    for i in range(len(models)):
-        torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
+    #for i in range(len(models)):
+        #torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
 
-    fig,axes = plt.subplots(1,len(learning_rates),figsize=(20,4))
+    fig,axes = plt.subplots(len(batch_sizes)*len(decays),len(learning_rates),figsize=(20,4))
 
     for i in range(len(learning_rates)):
-        axes[i].plot(train_losses[i][5:], label="train")
-        axes[i].plot(test_losses[i][5:], label="test")
-        axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.99)")
-        axes[i].legend()
+        for j in range(len(batch_sizes)*len(decays)):
+            axes[i,j].plot(train_losses[i*len(batch_sizes)*len(decays) + j][5:], label="train")
+            axes[i,j].plot(test_losses[i*len(batch_sizes)*len(decays) + j][5:], label="test")
+            axes[i,j].set_title(f"lr = {learning_rates[i]}, decay = {decays[j//len(batch_sizes)]}, batch_size = {batch_sizes[j//len(decays)]}")
+            axes[i,j].legend()
+    plt.show()
 
-    plt.savefig(f"explo/images/losses_pca_2.png")
+    plt.savefig(f"explo/images/losses_pca_3.png")
 
 
 if __name__ == '__main__':
