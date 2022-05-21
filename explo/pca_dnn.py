@@ -101,7 +101,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
 
                 train_losses.append(train_losses_i)
                 test_losses.append(test_losses_i)
-                print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs[i], tot_losses/n_batches))
+                print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs[0], tot_losses/n_batches))
 
 def main():
     coarse_factors = [32]
