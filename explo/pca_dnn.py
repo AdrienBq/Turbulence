@@ -172,7 +172,7 @@ def main():
     #for i in range(len(models)):
         #torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
 
-    fig,axes = plt.subplots(len(batch_sizes)*len(decays),len(learning_rates),figsize=(20,4))
+    fig,axes = plt.subplots(len(learning_rates),len(batch_sizes)*len(decays),figsize=(20,4))
 
     print(len(train_losses))
     print(len(learning_rates)*len(batch_sizes)*len(decays))
