@@ -174,6 +174,8 @@ def main():
 
     fig,axes = plt.subplots(len(batch_sizes)*len(decays),len(learning_rates),figsize=(20,4))
 
+    print(len(train_losses))
+    print(len(learning_rates)*len(batch_sizes)*len(decays))
     for i in range(len(learning_rates)):
         for j in range(len(batch_sizes)*len(decays)):
             axes[i,j].plot(train_losses[i*len(batch_sizes)*len(decays) + j][:], label="train")
