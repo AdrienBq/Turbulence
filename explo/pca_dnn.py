@@ -160,8 +160,8 @@ def main():
         ins[i] = torch.mm(ins[i], V)
 
     learning_rates = [1e-2,1e-3]
-    decays = [0.99,0.975,0.95]
-    batch_sizes = [16,32,64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    decays = [0.99,0.95,0.9,0.85,0.8]
+    batch_sizes = [32,64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
     nb_epochs = [50]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
@@ -176,9 +176,9 @@ def main():
 
     for i in range(len(decays)):
         for j in range(len(batch_sizes)*len(learning_rates)):
-            axes[i,j].plot(train_losses[i*len(batch_sizes)*len(learning_rates) + j][:], label="train")
-            axes[i,j].plot(test_losses[i*len(batch_sizes)*len(learning_rates) + j][:], label="test")
-            axes[i,j].set_title(f"decay = {decays[i]}, lr = {learning_rates[j//len(batch_sizes)]}, batch_size = {batch_sizes[j//len(learning_rates)]}")
+            axes[i,j].plot(train_losses[i*len(batch_sizes)*len(learning_rates) + j][2:], label="train")
+            axes[i,j].plot(test_losses[i*len(batch_sizes)*len(learning_rates) + j][2:], label="test")
+            axes[i,j].set_title(f"d = {decays[i]}, lr = {learning_rates[j//len(batch_sizes)]}, bs = {batch_sizes[j//len(learning_rates)]}")
             axes[i,j].legend()
     plt.show()
 
