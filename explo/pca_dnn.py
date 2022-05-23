@@ -181,8 +181,8 @@ def main():
     print("train losses array shape : ", train_losses_arr.shape)
     print("test losses array shape : ", test_losses_arr.shape)
 
-    #for i in range(len(models)):
-        #torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
+    for i in range(len(models)):
+        torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
 
     fig,axes = plt.subplots(len(decays),len(batch_sizes)*len(learning_rates),figsize=(5*len(decays),4*len(batch_sizes)*len(learning_rates)))
 
