@@ -159,10 +159,10 @@ def main():
     for i in range(len(ins)) :
         ins[i] = torch.mm(ins[i], V)
 
-    learning_rates = [1e-1,1e-2,1e-3]
-    decays = [0.99]
-    batch_sizes = [8,16,32,64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [150]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    learning_rates = [1e-2,1e-3]
+    decays = [0.99,0.975,0.95]
+    batch_sizes = [16,32,64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    nb_epochs = [50]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -172,13 +172,13 @@ def main():
     #for i in range(len(models)):
         #torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
 
-    fig,axes = plt.subplots(len(learning_rates),len(batch_sizes)*len(decays),figsize=(20,4))
+    fig,axes = plt.subplots(len(decays),len(batch_sizes)*len(learning_rates),figsize=(24,12))
 
-    for i in range(len(learning_rates)):
-        for j in range(len(batch_sizes)*len(decays)):
-            axes[i,j].plot(train_losses[i*len(batch_sizes)*len(decays) + j][:], label="train")
-            axes[i,j].plot(test_losses[i*len(batch_sizes)*len(decays) + j][:], label="test")
-            axes[i,j].set_title(f"lr = {learning_rates[i]}, decay = {decays[j//len(batch_sizes)]}, batch_size = {batch_sizes[j//len(decays)]}")
+    for i in range(len(decays)):
+        for j in range(len(batch_sizes)*len(learning_rates)):
+            axes[i,j].plot(train_losses[i*len(batch_sizes)*len(learning_rates) + j][:], label="train")
+            axes[i,j].plot(test_losses[i*len(batch_sizes)*len(learning_rates) + j][:], label="test")
+            axes[i,j].set_title(f"decay = {decays[i]}, lr = {learning_rates[j//len(batch_sizes)]}, batch_size = {batch_sizes[j//len(learning_rates)]}")
             axes[i,j].legend()
     plt.show()
 
