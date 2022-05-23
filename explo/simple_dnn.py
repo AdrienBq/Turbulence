@@ -65,7 +65,7 @@ def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, 
         model = model.to(device)
         print(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rates[i])
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.99, last_epoch= -1)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95, last_epoch= -1)
         models.append(model)
         train_losses_i = []
         test_losses_i = []
