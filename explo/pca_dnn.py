@@ -170,12 +170,16 @@ def main():
     learning_rates = [5*1e-3]
     decays = [0.97,0.95,0.93]
     batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [75]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = [2]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
 
     train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], reduced_len, len_out)
+    train_losses_arr = np.array(train_losses)
+    test_losses_arr = np.array(test_losses)
+    print("train losses array shape : ", train_losses_arr.shape)
+    print("test losses array shape : ", test_losses_arr.shape)
 
     #for i in range(len(models)):
         #torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
@@ -185,8 +189,8 @@ def main():
     for i in range(len(learning_rates)):
         for j in range(len(decays)):
             for k in range(len(batch_sizes)):
-                axes[j,k+i*len(batch_sizes)].plot(train_losses[i][j][k][2:], label='train')
-                axes[j,k+i*len(batch_sizes)].plot(test_losses[i][j][k][2:], label='test')
+                axes[j,k+i*len(batch_sizes)].plot(train_losses_arr[i][j][k][2:], label='train')
+                axes[j,k+i*len(batch_sizes)].plot(test_losses_arr[i][j][k][2:], label='test')
                 axes[j,k+i*len(batch_sizes)].set_title(f"d = {decays[i]}, lr = {learning_rates[j]}, bs = {batch_sizes[k]}")
                 axes[j,k+i*len(batch_sizes)].legend()
     plt.show()
