@@ -101,7 +101,7 @@ def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, 
         print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs[i], tot_losses/n_batches))
 
 def main():
-    coarse_factors = [32]
+    coarse_factors = [64,32,16]
     Directory = "data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']

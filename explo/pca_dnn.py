@@ -112,7 +112,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
         test_losses.append(test_losses_lr)
 
 def main():
-    coarse_factors = [32]
+    coarse_factors = [64,32,16]
     Directory = "data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
@@ -167,8 +167,8 @@ def main():
     for i in range(len(ins)) :
         ins[i] = torch.mm(ins[i], V)
 
-    learning_rates = [7*1e-3, 3*1e-3]
-    decays = [0.96,0.95,0.94]
+    learning_rates = [3*1e-3]
+    decays = [0.95]
     batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
     nb_epochs = [50]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
@@ -189,10 +189,13 @@ def main():
     for i in range(len(learning_rates)):
         for j in range(len(decays)):
             for k in range(len(batch_sizes)):
-                axes[j,k+i*len(batch_sizes)].plot(train_losses_arr[i,j,k,2:], label='train')
-                axes[j,k+i*len(batch_sizes)].plot(test_losses_arr[i,j,k,2:], label='test')
-                axes[j,k+i*len(batch_sizes)].set_title(f"d = {decays[j]}, lr = {learning_rates[i]}, bs = {batch_sizes[k]}")
-                axes[j,k+i*len(batch_sizes)].legend()
+                try : 
+                    axes[j,k+i*len(batch_sizes)].plot(train_losses_arr[i,j,k,2:], label='train')
+                    axes[j,k+i*len(batch_sizes)].plot(test_losses_arr[i,j,k,2:], label='test')
+                    axes[j,k+i*len(batch_sizes)].set_title(f"d = {decays[j]}, lr = {learning_rates[i]}, bs = {batch_sizes[k]}")
+                    axes[j,k+i*len(batch_sizes)].legend()
+                except :
+                    pass
     plt.show()
 
     plt.savefig(f"explo/images/losses_pca_3.png")
