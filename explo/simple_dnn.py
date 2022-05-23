@@ -162,10 +162,13 @@ def main():
     fig,axes = plt.subplots(1,len(learning_rates),figsize=(20,4))
 
     for i in range(len(learning_rates)):
-        axes[i].plot(train_losses[i][5:], label="train")
-        axes[i].plot(test_losses[i][5:], label="test")
-        axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.99)")
-        axes[i].legend()
+        try :
+            axes[i].plot(train_losses[i][5:], label="train")
+            axes[i].plot(test_losses[i][5:], label="test")
+            axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.99)")
+            axes[i].legend()
+        except :
+            pass
 
     plt.savefig(f"explo/images/losses_bash.png")
 

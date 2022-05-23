@@ -190,8 +190,8 @@ def main():
         for j in range(len(decays)):
             for k in range(len(batch_sizes)):
                 try : 
-                    axes[j,k+i*len(batch_sizes)].plot(train_losses_arr[i,j,k,2:], label='train')
-                    axes[j,k+i*len(batch_sizes)].plot(test_losses_arr[i,j,k,2:], label='test')
+                    axes[j,k+i*len(batch_sizes)].plot(train_losses_arr[i,j,k,1:], label='train')
+                    axes[j,k+i*len(batch_sizes)].plot(test_losses_arr[i,j,k,1:], label='test')
                     axes[j,k+i*len(batch_sizes)].set_title(f"d = {decays[j]}, lr = {learning_rates[i]}, bs = {batch_sizes[k]}")
                     axes[j,k+i*len(batch_sizes)].legend()
                 except :
