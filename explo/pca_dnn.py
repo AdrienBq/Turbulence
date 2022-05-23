@@ -61,7 +61,11 @@ def test(model, device, input_test, output_test):
 
 def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
     for learning_rate in learning_rates:
+        train_losses_lr = []
+        test_losses_lr = []
         for decay in decays:
+            train_losses_decay = []
+            test_losses_decay = []
             for batch_size in batch_sizes :
                 n_batches = input_train.shape[0]//batch_size
                 model = DNN(batch_size=batch_size,input_size=len_in,output_size=len_out)
@@ -70,8 +74,8 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
                 scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, decay, last_epoch= -1)
                 models.append(model)
-                train_losses_i = []
-                test_losses_i = []
+                train_losses_bs = []
+                test_losses_bs = []
                 for epoch in trange(nb_epochs[0], leave=False):
                     model.train()
                     tot_losses=0
@@ -90,18 +94,22 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                         # backward pass
                         loss.backward()
                         optimizer.step()
-                    train_losses_i.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
+                    train_losses_bs.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
                     #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                                     # on a une loss en moyenne 2 fois plus petite
 
-                    test_losses_i.append(test(model, device, input_test, output_test))
+                    test_losses_bs.append(test(model, device, input_test, output_test))
 
                     if epoch < 300:
                         scheduler.step()
 
-                train_losses.append(train_losses_i)
-                test_losses.append(test_losses_i)
                 print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(learning_rate, decay, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
+                train_losses_decay.append(train_losses_bs)
+                test_losses_decay.append(test_losses_bs)
+            train_losses_lr.append(train_losses_decay)
+            test_losses_lr.append(test_losses_decay)
+        train_losses.append(train_losses_lr)
+        test_losses.append(test_losses_lr)
 
 def main():
     coarse_factors = [32]
@@ -159,10 +167,10 @@ def main():
     for i in range(len(ins)) :
         ins[i] = torch.mm(ins[i], V)
 
-    learning_rates = [1e-2,1e-3]
-    decays = [0.99,0.95,0.9,0.85,0.8]
-    batch_sizes = [32,64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [50]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    learning_rates = [5*1e-3]
+    decays = [0.97,0.95,0.93]
+    batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    nb_epochs = [75]   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -172,14 +180,15 @@ def main():
     #for i in range(len(models)):
         #torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
 
-    fig,axes = plt.subplots(len(decays),len(batch_sizes)*len(learning_rates),figsize=(24,12))
+    fig,axes = plt.subplots(len(decays),len(batch_sizes)*len(learning_rates),figsize=(5*len(decays),4*len(batch_sizes)*len(learning_rates)))
 
-    for i in range(len(decays)):
-        for j in range(len(batch_sizes)*len(learning_rates)):
-            axes[i,j].plot(train_losses[i*len(batch_sizes)*len(learning_rates) + j][2:], label="train")
-            axes[i,j].plot(test_losses[i*len(batch_sizes)*len(learning_rates) + j][2:], label="test")
-            axes[i,j].set_title(f"d = {decays[i]}, lr = {learning_rates[j//len(batch_sizes)]}, bs = {batch_sizes[j//len(learning_rates)]}")
-            axes[i,j].legend()
+    for i in range(len(learning_rates)):
+        for j in range(len(decays)):
+            for k in range(len(batch_sizes)):
+                axes[j,k+i*len(batch_sizes)].plot(train_losses[i][j][k][2:], label='train')
+                axes[j,k+i*len(batch_sizes)].plot(test_losses[i][j][k][2:], label='test')
+                axes[j,k+i*len(batch_sizes)].set_title(f"d = {decays[i]}, lr = {learning_rates[j]}, bs = {batch_sizes[k]}")
+                axes[j,k+i*len(batch_sizes)].legend()
     plt.show()
 
     plt.savefig(f"explo/images/losses_pca_3.png")
