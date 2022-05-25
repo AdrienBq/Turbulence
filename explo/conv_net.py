@@ -107,7 +107,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
 
                     test_losses_bs.append(test(model, device, input_test, output_test))
 
-                    if epoch < 300:
+                    if epoch < 100:
                         scheduler.step()
 
                 print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(learning_rate, decay, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
@@ -169,10 +169,10 @@ def main():
         output /= torch.std(output)
         outs[i] = output
 
-    learning_rates = [1*1e-3, 8*1e-4, 6*1e-4, 4*1e-4]
-    decays = [0.99,0.98,0.97,0.96,0.95]
-    batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [70]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    learning_rates = [8*1e-4]
+    decays = [0.98]
+    batch_sizes = [64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    nb_epochs = [200]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -183,8 +183,7 @@ def main():
     print("train losses array shape : ", train_losses_arr.shape)
     print("test losses array shape : ", test_losses_arr.shape)
 
-    for i in range(len(models)):
-        torch.save(models[i].state_dict(), f"explo/models/conv_net_{i}.pt")
+    torch.save(models[0].state_dict(), f"explo/models/conv_net_{0}.pt")
 
     fig,axes = plt.subplots(len(learning_rates),len(batch_sizes)*len(decays),figsize=(5*len(learning_rates),4*len(batch_sizes)*len(decays)))
 
