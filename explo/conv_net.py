@@ -19,11 +19,15 @@ print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
 
 
-class DNN(nn.Module):
-    def __init__(self, batch_size, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=256, hidden_size2=512, hidden_size3=256):
-        super(DNN, self).__init__()
-        self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                        nn.Linear(input_size, hidden_size1),
+class CNN(nn.Module):
+    def __init__(self, input_features, output_features, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=128, hidden_size2=256, hidden_size3=256):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True)
+        self.conv2 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
+        self.bn1 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.bn2 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.regression = nn.Sequential(nn.BatchNorm1d(int(input_features*(nz-1)/(3*5)), eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Linear(int(input_features*(nz-1)/(3*5)), hidden_size1),
                                         nn.ReLU(),
                                         nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob1),
@@ -35,24 +39,26 @@ class DNN(nn.Module):
                                         nn.ReLU(),
                                         nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob3),
-                                        nn.Linear(hidden_size3, output_size)
-                                        )
+                                        nn.Linear(hidden_size3, output_features))
+
         self.drop_prob1 = drop_prob1
         self.drop_prob2 = drop_prob2
         self.drop_prob3 = drop_prob3
-        self.batch_size = batch_size
-        self.input_shape = input_size
-        self.output_shape = output_size
+        self.input_shape = int(input_features*(nz-1)/(3*5))
+        self.output_shape = nz
         self.hidden_size1 = hidden_size1
         self.hidden_size2 = hidden_size2
         self.hidden_size3 = hidden_size3
+                                        
 
-    
-    def forward(self, x):
+    def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
+        x = F.max_pool1d(input=self.conv1(self.bn1(x)), kernel_size=5)
+        x = F.max_pool1d(input=self.conv2(self.bn2(x)), kernel_size=3)
+        x = x.reshape(-1, x.shape[-2]*x.shape[-1])
         return self.regression(x)
 
 def test(model, device, input_test, output_test):
-    model.eval()                                    # on a une loss en moyenne 2 fois plus petite
+    model.eval()
     # prediction
     output_pred = model(input_test.to(device))
     # compute loss
@@ -68,7 +74,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
             test_losses_decay = []
             for batch_size in batch_sizes :
                 n_batches = input_train.shape[0]//batch_size
-                model = DNN(batch_size=batch_size,input_size=len_in,output_size=len_out)
+                model = CNN(input_features=len_in,output_features=len_out)
                 model = model.to(device)
                 print(device)
                 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -81,7 +87,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                     tot_losses=0
                     indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
                     for i_batch in indexes_arr:
-                        input_batch = input_train[i_batch,:].to(device)
+                        input_batch = input_train[i_batch,:,:].to(device)
                         output_batch = output_train[i_batch,:].to(device)
                         optimizer.zero_grad()
                         # forward pass
@@ -89,6 +95,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                         #print('output_batch device : ', output_batch.get_device())
                         output_pred = model(input_batch)
                         # compute loss
+                        #print("out size :", output_pred.shape, ", out batch size :", output_batch.shape)
                         loss = F.mse_loss(output_pred, output_batch, reduction='mean')
                         tot_losses += loss.item()
                         # backward pass
@@ -111,9 +118,10 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
         train_losses.append(train_losses_lr)
         test_losses.append(test_losses_lr)
 
+
 def main():
-    coarse_factors = [64,32,16]
-    Directory = "data"
+    coarse_factors = [32]
+    Directory = f"data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
     nz=376
@@ -121,7 +129,7 @@ def main():
     len_samples = nz*len(variables)
     len_in = nz*(len(variables)-1)
     len_out = nz
-    reduced_len = 30
+    n_in_features = len(variables)-1
 
     model_number = 11
     tmin=1
@@ -141,6 +149,8 @@ def main():
     train_times = pd.read_csv(path_times_train).drop(columns=['Unnamed: 0']).to_numpy().transpose()[0]
     test_times = pd.read_csv(path_times_test).drop(columns=['Unnamed: 0']).to_numpy().transpose()[0]
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     input_train, output_train, input_test, output_test = utils.make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory)
     ins = [input_train, input_test]
     outs = [output_train, output_test]
@@ -149,23 +159,15 @@ def main():
         input = ins[j]
         input = input.reshape(-1,len(variables)-1,nz)
         for i in range(len(variables)-1):
-            input[:,i] -= input[:,i].mean()
-            input[:,i] /= input[:,i].std()
-        input = input.reshape(-1,(len(variables)-1)*nz)
-        input = input.to(device)
+            input[:,i] -= torch.mean(input[:,i])
+            input[:,i] /= torch.std(input[:,i])
         ins[j] = input
 
     for i in range(len(outs)):
         output = outs[i]
-        output -= output.mean()
-        output /= output.std()
-        output = output.to(device)
+        output -= torch.mean(output)
+        output /= torch.std(output)
         outs[i] = output
-
-    U,S,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
-
-    for i in range(len(ins)) :
-        ins[i] = torch.mm(ins[i], V)
 
     learning_rates = [3*1e-3]
     decays = [0.95]
@@ -175,14 +177,14 @@ def main():
     test_losses=[]
     models=[]
 
-    train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], reduced_len, len_out)
+    train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], n_in_features, nz)
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
     print("train losses array shape : ", train_losses_arr.shape)
     print("test losses array shape : ", test_losses_arr.shape)
 
-    for i in range(len(models)):
-        torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
+    #for i in range(len(models)):
+        #torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
 
     fig,axes = plt.subplots(len(decays),len(batch_sizes)*len(learning_rates),figsize=(5*len(decays),4*len(batch_sizes)*len(learning_rates)))
 
@@ -197,7 +199,6 @@ def main():
                 except :
                     pass
     plt.show()
-
     plt.savefig(f"explo/images/losses_pca_3.png")
 
 
