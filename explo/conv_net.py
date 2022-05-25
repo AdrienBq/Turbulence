@@ -169,10 +169,10 @@ def main():
         output /= torch.std(output)
         outs[i] = output
 
-    learning_rates = [1*1e-3, 5*1e-4, 1*1e-4]
-    decays = [0.97,0.95,0.93,0.9]
+    learning_rates = [1*1e-3, 8*1e-4, 6*1e-4, 4*1e-4]
+    decays = [0.99,0.98,0.97,0.96,0.95]
     batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [100]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = [70]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -199,7 +199,7 @@ def main():
                 except :
                     pass
     plt.show()
-    plt.savefig(f"explo/images/losses_conv_2.png")
+    plt.savefig(f"explo/images/losses_conv_3.png")
 
 
 if __name__ == '__main__':
