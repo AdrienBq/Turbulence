@@ -54,7 +54,7 @@ class CNN(nn.Module):
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
         x = F.max_pool1d(input=self.conv1(self.bn1(x)), kernel_size=5)
         x = F.max_pool1d(input=self.conv2(self.bn2(x)), kernel_size=3)
-        x = x.reshape(-1, x.shape[-2]*x.shape[-1])
+        x = torch.flatten(x, start_dim=1,end_dim=-1)
         return self.regression(x)
 
 def test(model, device, input_test, output_test):
@@ -169,10 +169,10 @@ def main():
         output /= torch.std(output)
         outs[i] = output
 
-    learning_rates = [1*1e-3, 1*1e-4, 1*1e-5, 1*1e-6]
-    decays = [0.99,0.97,0.95]
-    batch_sizes = [32,64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [60]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    learning_rates = [1*1e-3, 5*1e-4, 1*1e-4]
+    decays = [0.97,0.95,0.93,0.9]
+    batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    nb_epochs = [100]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -183,8 +183,8 @@ def main():
     print("train losses array shape : ", train_losses_arr.shape)
     print("test losses array shape : ", test_losses_arr.shape)
 
-    #for i in range(len(models)):
-        #torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
+    for i in range(len(models)):
+        torch.save(models[i].state_dict(), f"explo/models/conv_net_{i}.pt")
 
     fig,axes = plt.subplots(len(learning_rates),len(batch_sizes)*len(decays),figsize=(5*len(learning_rates),4*len(batch_sizes)*len(decays)))
 
@@ -199,7 +199,7 @@ def main():
                 except :
                     pass
     plt.show()
-    plt.savefig(f"explo/images/losses_conv_1.png")
+    plt.savefig(f"explo/images/losses_conv_2.png")
 
 
 if __name__ == '__main__':
