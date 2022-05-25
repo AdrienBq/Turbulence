@@ -169,10 +169,10 @@ def main():
         output /= torch.std(output)
         outs[i] = output
 
-    learning_rates = [1*1e-2, 1*1e-3, 1*1e-4, 1*1e-5, 1*1e-6]
+    learning_rates = [1*1e-3, 1*1e-4, 1*1e-5, 1*1e-6]
     decays = [0.99,0.97,0.95]
-    batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [50]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    batch_sizes = [32,64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    nb_epochs = [60]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -186,7 +186,7 @@ def main():
     #for i in range(len(models)):
         #torch.save(models[i].state_dict(), f"explo/models/pca_{i}.pt")
 
-    fig,axes = plt.subplots(len(decays),len(batch_sizes)*len(learning_rates),figsize=(5*len(decays),4*len(batch_sizes)*len(learning_rates)))
+    fig,axes = plt.subplots(len(learning_rates),len(batch_sizes)*len(decays),figsize=(5*len(learning_rates),4*len(batch_sizes)*len(decays)))
 
     for i in range(len(learning_rates)):
         for j in range(len(decays)):
@@ -199,7 +199,7 @@ def main():
                 except :
                     pass
     plt.show()
-    plt.savefig(f"explo/images/losses_pca_3.png")
+    plt.savefig(f"explo/images/losses_conv_1.png")
 
 
 if __name__ == '__main__':
