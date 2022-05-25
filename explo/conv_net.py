@@ -45,7 +45,7 @@ class CNN(nn.Module):
         self.drop_prob2 = drop_prob2
         self.drop_prob3 = drop_prob3
         self.input_shape = int(input_features*(nz-1)/(3*5))
-        self.output_shape = nz
+        self.output_shape = output_features
         self.hidden_size1 = hidden_size1
         self.hidden_size2 = hidden_size2
         self.hidden_size3 = hidden_size3
