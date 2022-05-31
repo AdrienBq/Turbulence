@@ -185,12 +185,20 @@ if __name__ == '__main__':
     "n_layers": 1,
     "n_units_l0": 164,
     "dropout_l0": 0.20774530045008385,
+    "n_units_l1": 0,
+    "dropout_l1": 0,
+    "n_units_l2": 0,
+    "dropout_l2": 0,
+    "n_units_l3": 0,
+    "dropout_l3": 0,
+    "n_units_l4": 0,
+    "dropout_l4": 0,
     "decay": 0.9139623182225113,
     "lr": 0.003422013072710109
     }
 
-    sampler = optuna.samplers.CmaEsSampler()
-    pruner = optuna.pruners.MedianPruner(n_warmup_steps=10)
+    sampler = optuna.samplers.CmaEsSampler(x0)
+    pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
     study.optimize(objective, n_trials=100, timeout=10800)
