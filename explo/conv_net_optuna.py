@@ -31,10 +31,10 @@ def define_lin_layers(trial, input_features, output_features):
     in_features = input_features
 
     for i in range(n_lins):
-        out_features = trial.suggest_int("n_units_l{}".format(i), 16, 256)
+        out_features = trial.suggest_int("n_units_l{}".format(i), 64, 512)
         layers.append(nn.Linear(in_features, out_features))
         layers.append(nn.ReLU())
-        p = trial.suggest_float("dropout_l{}".format(i), 0.2, 0.5)
+        p = trial.suggest_float("dropout_l{}".format(i), 0.1, 0.5)
         layers.append(nn.Dropout(p))
         in_features = out_features
     layers.append(nn.Linear(in_features, output_features))
@@ -78,7 +78,8 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
 
     # Generate the optimizers.
     decay = trial.suggest_float("decay", 0.9, 0.99,)
-    optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
+    #optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
+    optimizer_name = "Adam"
     lr = trial.suggest_float("lr", 1e-5, 1e-2, log=True)
     optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, decay, last_epoch= -1)
@@ -111,7 +112,13 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
         if epoch < 100:
             scheduler.step()
 
-    print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(lr, decay, batch_size, epoch+1, nb_epochs, tot_losses/n_batches))
+        trial.report(test_losses[-1], epoch)
+
+        # Handle pruning based on the intermediate value.
+        if trial.should_prune():
+            raise optuna.TrialPruned()
+
+    print('Model {},{},{},Epoch [{}/{}], Train Loss: {:.6f}'.format(lr, decay, batch_size, epoch+1, nb_epochs, tot_losses/n_batches))
     return test_losses[-1]
 
 def objective(trial):
@@ -165,7 +172,7 @@ def objective(trial):
         outs[i] = output
 
     batch_size = 32             
-    nb_epochs = 50            
+    nb_epochs = 5            
     train_losses=[]
     test_losses=[]
 
@@ -174,8 +181,16 @@ def objective(trial):
 
 if __name__ == '__main__':
 
+    x0 = {
+    "n_layers": 1,
+    "n_units_l0": 164,
+    "dropout_l0": 0.20774530045008385,
+    "decay": 0.9139623182225113,
+    "lr": 0.003422013072710109
+    }
+
     print("starting optimization")
-    study = optuna.create_study(direction="minimize")
+    study = optuna.create_study(direction="minimize", pruner=optuna.pruners.MedianPruner(), sampler=optuna.integration.PyCmaSampler(x0))
     study.optimize(objective, n_trials=100, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
