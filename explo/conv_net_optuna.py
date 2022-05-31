@@ -69,7 +69,7 @@ def test(model, device, input_test, output_test):
     test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
     return test_loss.item()
 
-def train(device, trial,  batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
+def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
 
     # define model
     n_batches = input_train.shape[0]//batch_size
@@ -114,7 +114,7 @@ def train(device, trial,  batch_size, nb_epochs, train_losses, test_losses, inpu
     print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(lr, decay, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
     return test_losses[-1]
 
-def objective():
+def objective(trial):
     coarse_factors = [32]
     Directory = f"data"
 
@@ -169,7 +169,7 @@ def objective():
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, batch_size, nb_epochs, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], n_in_features, nz)
+    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], n_in_features, nz)
     return obj
 
 if __name__ == '__main__':
