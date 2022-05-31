@@ -174,6 +174,7 @@ def objective():
 
 if __name__ == '__main__':
 
+    print("starting optimization")
     study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=100, timeout=600)
 
