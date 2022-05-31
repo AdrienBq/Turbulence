@@ -31,7 +31,7 @@ def define_lin_layers(trial, input_features, output_features):
     in_features = input_features
 
     for i in range(n_lins):
-        out_features = trial.suggest_int("n_units_l{}".format(i), 4, 128)
+        out_features = trial.suggest_int("n_units_l{}".format(i), 16, 256)
         layers.append(nn.Linear(in_features, out_features))
         layers.append(nn.ReLU())
         p = trial.suggest_float("dropout_l{}".format(i), 0.2, 0.5)
@@ -79,7 +79,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
     # Generate the optimizers.
     decay = trial.suggest_float("decay", 0.9, 0.99,)
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
-    lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
+    lr = trial.suggest_float("lr", 1e-5, 1e-2, log=True)
     optimizer = getattr(optim, optimizer_name)(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, decay, last_epoch= -1)
 
@@ -165,7 +165,7 @@ def objective(trial):
         outs[i] = output
 
     batch_size = 32             
-    nb_epochs = 10            
+    nb_epochs = 50            
     train_losses=[]
     test_losses=[]
 
@@ -176,7 +176,7 @@ if __name__ == '__main__':
 
     print("starting optimization")
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=100, timeout=600)
+    study.optimize(objective, n_trials=100, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
