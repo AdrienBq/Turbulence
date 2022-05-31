@@ -111,7 +111,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
         if epoch < 100:
             scheduler.step()
 
-    print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(lr, decay, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
+    print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(lr, decay, batch_size, epoch+1, nb_epochs, tot_losses/n_batches))
     return test_losses[-1]
 
 def objective(trial):
@@ -165,7 +165,7 @@ def objective(trial):
         outs[i] = output
 
     batch_size = 32             
-    nb_epochs = 200            
+    nb_epochs = 10            
     train_losses=[]
     test_losses=[]
 
