@@ -186,11 +186,10 @@ if __name__ == '__main__':
     "n_units_l0": 164,
     "dropout_l0": 0.20774530045008385,
     "decay": 0.9139623182225113,
-    "optimizer": "Adam",
     "lr": 0.003422013072710109
     }
 
-    sampler = optuna.samplers.CmaEsSampler(x0)
+    sampler = optuna.samplers.CmaEsSampler()
     pruner = optuna.pruners.MedianPruner(n_warmup_steps=10)
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
