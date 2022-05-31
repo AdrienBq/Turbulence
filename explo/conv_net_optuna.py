@@ -48,7 +48,7 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
         self.bn1 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.bn2 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.regression = define_lin_layers(trial)
+        self.regression = define_lin_layers(trial, int(input_features*(output_features-1)/(3*5)), output_features)
 
         self.input_shape = int(input_features*(output_features-1)/(3*5))
         self.output_shape = output_features
