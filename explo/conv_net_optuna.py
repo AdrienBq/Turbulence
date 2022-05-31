@@ -172,7 +172,7 @@ def objective(trial):
         outs[i] = output
 
     batch_size = 32             
-    nb_epochs = 50            
+    nb_epochs = 5          
     train_losses=[]
     test_losses=[]
 
@@ -190,7 +190,9 @@ if __name__ == '__main__':
     }
 
     print("starting optimization")
-    study = optuna.create_study(direction="minimize", pruner=optuna.pruners.MedianPruner(), sampler=optuna.samplers.CmaEsSampler(x0))
+    sampler = optuna.samplers.CmaEsSampler(x0)
+    pruner = optuna.pruners.MedianPruner(n_warmup_steps=10)
+    study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     study.optimize(objective, n_trials=100, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
