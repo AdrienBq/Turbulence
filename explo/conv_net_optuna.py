@@ -190,7 +190,7 @@ if __name__ == '__main__':
     }
 
     print("starting optimization")
-    study = optuna.create_study(direction="minimize", pruner=optuna.pruners.MedianPruner(), sampler=optuna.integration.PyCmaSampler(x0))
+    study = optuna.create_study(direction="minimize", pruner=optuna.pruners.MedianPruner(), sampler=optuna.samplers.CmaEsSampler(x0))
     study.optimize(objective, n_trials=100, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
