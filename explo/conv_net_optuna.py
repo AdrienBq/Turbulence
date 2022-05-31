@@ -183,12 +183,12 @@ if __name__ == '__main__':
 
     x0 = {
     "n_layers": 1,
-    "n_units_l0": 164,
-    "dropout_l0": 0.20774530045008385,
-    "n_units_l1": 0,
-    "dropout_l1": 0,
-    "n_units_l2": 0,
-    "dropout_l2": 0,
+    "n_units_l0": 288,
+    "dropout_l0": 0.30273545582892747,
+    "n_units_l1": 288,
+    "dropout_l1": 0.30110562280966263,
+    "n_units_l2": 288,
+    "dropout_l2": 0.29040759867151167,
     "n_units_l3": 0,
     "dropout_l3": 0,
     "n_units_l4": 0,
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
-    study.optimize(objective, n_trials=100, timeout=10800)
+    study.optimize(objective, n_trials=50, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
