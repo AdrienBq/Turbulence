@@ -182,7 +182,7 @@ def objective(trial):
 if __name__ == '__main__':
 
     x0 = {
-    "n_layers": 1,
+    "n_layers": 3,
     "n_units_l0": 288,
     "dropout_l0": 0.30273545582892747,
     "n_units_l1": 288,
