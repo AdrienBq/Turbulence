@@ -184,11 +184,11 @@ if __name__ == '__main__':
     x0 = {
     "n_layers": 3,
     "n_units_l0": 288,
-    "dropout_l0": 0.2973,
-    "n_units_l1": 288,
-    "dropout_l1": 0.2977,
-    "n_units_l2": 288,
-    "dropout_l2": 0.2784,
+    "dropout_l0": 0.3011271546788369,
+    "n_units_l1": 471,
+    "dropout_l1": 0.12085739976949017,
+    "n_units_l2": 300,
+    "dropout_l2": 0.12469698281651938,
     "n_units_l3": 0,
     "dropout_l3": 0,
     "n_units_l4": 0,
@@ -197,11 +197,11 @@ if __name__ == '__main__':
     "lr": 0.003422013072710109
     }
 
-    sampler = optuna.samplers.CmaEsSampler(restart_strategy="ipop")
+    sampler = optuna.samplers.TPESampler()
     pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
-    study.optimize(objective, n_trials=300, timeout=22000)
+    study.optimize(objective, n_trials=100, timeout=10000)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
