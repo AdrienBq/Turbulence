@@ -20,7 +20,7 @@ print('cuda available : ', torch.cuda.is_available())
 
 
 class CNN(nn.Module):
-    def __init__(self, input_features, output_features, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=128, hidden_size2=256, hidden_size3=256):
+    def __init__(self, input_features, output_features, drop_prob1=0.301, drop_prob2=0.121, drop_prob3=0.125, hidden_size1=288, hidden_size2=471, hidden_size3=300):
         super(CNN, self).__init__()
         self.conv1 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True)
         self.conv2 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
@@ -169,10 +169,10 @@ def main():
         output /= torch.std(output)
         outs[i] = output
 
-    learning_rates = [8*1e-4]
-    decays = [0.98]
-    batch_sizes = [64]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [200]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    learning_rates = [3.15*1e-4]
+    decays = [0.963]
+    batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    nb_epochs = [100]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -183,7 +183,7 @@ def main():
     print("train losses array shape : ", train_losses_arr.shape)
     print("test losses array shape : ", test_losses_arr.shape)
 
-    torch.save(models[0].state_dict(), f"explo/models/conv_net_{0}.pt")
+    torch.save(models[0].state_dict(), f"explo/models/conv_net_opt_{0}.pt")
 
     fig,axes = plt.subplots(len(learning_rates),len(batch_sizes)*len(decays),figsize=(5*len(learning_rates),4*len(batch_sizes)*len(decays)))
 
@@ -197,8 +197,16 @@ def main():
                     axes[i,k+j*len(batch_sizes)].legend()
                 except :
                     pass
+    try :
+        axes.plot(train_losses_arr[0,0,0,1:], label='train')
+        axes.plot(test_losses_arr[0,0,0,1:], label='test')
+        axes.set_title(f"d = {decays[0]}, lr = {learning_rates[0]}, bs = {batch_sizes[0]}")
+        axes.legend()
+    except :
+        pass
+
     plt.show()
-    plt.savefig(f"explo/images/losses_conv_3.png")
+    plt.savefig(f"explo/images/losses_conv_opt.png")
 
 
 if __name__ == '__main__':

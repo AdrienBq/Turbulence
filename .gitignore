@@ -13,7 +13,7 @@
 .DS_Store
 modules/not_used.py
 explo/local_simple_dnn.ipynb
-# /explo/models
+/explo/images/optim_cnn.pdf
 
 # User-specific files
 *.rsuser
