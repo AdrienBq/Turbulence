@@ -71,9 +71,7 @@ class VAE(nn.Module):
         self.latent_shape = latent_features
                                         
     def encode(self, x):
-        print(x.shape)
         x = self.bulk_encoder(x)
-        print(x.shape)
         mu = self.mu_layer(x)
         logvar = self.sig_layer(x)
         return mu, logvar
@@ -147,7 +145,6 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
             optimizer_ff.zero_grad()
 
             # forward pass
-            print(input_batch.shape)
             x_reconst, mu, log_var = model_vae(input_batch)
             latent_input = model_vae.reparameterize(mu, log_var)
             output_pred = model_ff(latent_input)
