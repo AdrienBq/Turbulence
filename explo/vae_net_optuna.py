@@ -109,7 +109,7 @@ def test(model_vae, model_ff, device, input_test, output_test):
 
 def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
 
-    latent_dim = trial.suggest_int("latent_dim", 10, 100)
+    latent_dim = trial.suggest_int("latent_dim", 5, 20)
 
     # define model
     n_batches = input_train.shape[0]//batch_size
