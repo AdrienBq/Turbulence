@@ -19,15 +19,41 @@ print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
 
 
-class CNN(nn.Module):
-    def __init__(self, input_features, output_features, drop_prob1=0.301, drop_prob2=0.121, drop_prob3=0.125, hidden_size1=288, hidden_size2=471, hidden_size3=300):
-        super(CNN, self).__init__()
-        self.conv1 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True)
-        self.conv2 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
-        self.bn1 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn2 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.regression = nn.Sequential(nn.BatchNorm1d(int(input_features*(output_features-1)/(3*5)), eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                        nn.Linear(int(input_features*(output_features-1)/(3*5)), hidden_size1),
+# VAE model
+class VAE(nn.Module):
+    def __init__(self, input_features=2256, h_dim=400, z_dim=20):
+        super(VAE, self).__init__()
+        self.fc1 = nn.Linear(input_features, h_dim)
+        self.fc2 = nn.Linear(h_dim, z_dim)
+        self.fc3 = nn.Linear(h_dim, z_dim)
+        self.fc4 = nn.Linear(z_dim, h_dim)
+        self.fc5 = nn.Linear(h_dim, input_features)
+        
+    def encode(self, x):
+        h = F.relu(self.fc1(x))
+        return self.fc2(h), self.fc3(h)
+    
+    def reparameterize(self, mu, log_var):
+        std = torch.exp(log_var/2)
+        eps = torch.randn_like(std)
+        return mu + eps * std
+
+    def decode(self, z):
+        h = F.relu(self.fc4(z))
+        return self.fc5(h)
+    
+    def forward(self, x):
+        mu, log_var = self.encode(x)
+        z = self.reparameterize(mu, log_var)
+        x_reconst = self.decode(z)
+        return x_reconst, mu, log_var
+
+
+class DNN(nn.Module):
+    def __init__(self, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=128, hidden_size2=256, hidden_size3=128):
+        super(DNN, self).__init__()
+        self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Linear(input_size, hidden_size1),
                                         nn.ReLU(),
                                         nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob1),
@@ -39,33 +65,31 @@ class CNN(nn.Module):
                                         nn.ReLU(),
                                         nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob3),
-                                        nn.Linear(hidden_size3, output_features))
-
+                                        nn.Linear(hidden_size3, output_size)
+                                        )
         self.drop_prob1 = drop_prob1
         self.drop_prob2 = drop_prob2
         self.drop_prob3 = drop_prob3
-        self.input_shape = int(input_features*(output_features-1)/(3*5))
-        self.output_shape = output_features
+        self.input_shape = input_size
+        self.output_shape = output_size
         self.hidden_size1 = hidden_size1
         self.hidden_size2 = hidden_size2
         self.hidden_size3 = hidden_size3
-                                        
 
-    def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
-        x = F.max_pool1d(input=self.conv1(self.bn1(x)), kernel_size=5)
-        x = F.max_pool1d(input=self.conv2(self.bn2(x)), kernel_size=3)
-        x = torch.flatten(x, start_dim=1,end_dim=-1)
+    def forward(self, x):
         return self.regression(x)
 
-def test(model, device, input_test, output_test):
-    model.eval()
+def test(model_vae, model_ff, device, input_test, output_test):
+    model_vae.eval()
+    model_ff.eval()
     # prediction
-    output_pred = model(input_test.to(device))
+    mu, logvar = model_vae.encode(input_test.to(device))
+    output_pred = model_ff(model_vae.reparameterize(mu, logvar))
     # compute loss
     test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
     return test_loss.item()
 
-def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
+def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, latent_dim, len_out):
     for learning_rate in learning_rates:
         train_losses_lr = []
         test_losses_lr = []
@@ -74,41 +98,55 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
             test_losses_decay = []
             for batch_size in batch_sizes :
                 n_batches = input_train.shape[0]//batch_size
-                model = CNN(input_features=len_in,output_features=len_out)
-                model = model.to(device)
-                print(device)
-                optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-                scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, decay, last_epoch= -1)
-                models.append(model)
+                model_vae = VAE(input_features=len_in, z_dim=latent_dim)
+                model_ff = DNN(input_size=latent_dim, output_size=len_out)
+                model_vae = model_vae.to(device)
+                model_ff = model_ff.to(device)
+
+                optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=learning_rate)
+                scheduler_vae = torch.optim.lr_scheduler.ExponentialLR(optimizer_vae, decay, last_epoch= -1)
+                optimizer_ff = torch.optim.Adam(model_ff.parameters(), lr=learning_rate)
+                scheduler_ff = torch.optim.lr_scheduler.ExponentialLR(optimizer_ff, decay, last_epoch= -1)
+                models.append([model_vae, model_ff])
+
                 train_losses_bs = []
                 test_losses_bs = []
                 for epoch in trange(nb_epochs[0], leave=False):
-                    model.train()
+                    model_vae.train()
+                    model_ff.train()
                     tot_losses=0
                     indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
                     for i_batch in indexes_arr:
-                        input_batch = input_train[i_batch,:,:].to(device)
-                        output_batch = output_train[i_batch,:].to(device)
-                        optimizer.zero_grad()
+                        input_batch = input_train[i_batch].to(device)
+                        output_batch = output_train[i_batch].to(device)
+                        optimizer_vae.zero_grad()
+                        optimizer_ff.zero_grad()
+
                         # forward pass
-                        #print('input_batch device : ', input_batch.get_device())
-                        #print('output_batch device : ', output_batch.get_device())
-                        output_pred = model(input_batch)
+                        x_reconst, mu, log_var = model_vae(input_batch)
+                        latent_input = model_vae.reparameterize(mu, log_var)
+                        output_pred = model_ff(latent_input)
+
                         # compute loss
-                        #print("out size :", output_pred.shape, ", out batch size :", output_batch.shape)
-                        loss = F.mse_loss(output_pred, output_batch, reduction='mean')
-                        tot_losses += loss.item()
+                        reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='sum')
+                        kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+                        flux_pred_loss = F.mse_loss(output_pred, output_batch, reduction='mean')
+                        loss =  flux_pred_loss + reconst_loss + kl_div
+                        tot_losses += flux_pred_loss.item()
+
                         # backward pass
                         loss.backward()
-                        optimizer.step()
+                        optimizer_vae.step()
+                        optimizer_ff.step()
                     train_losses_bs.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
                     #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                                     # on a une loss en moyenne 2 fois plus petite
 
-                    test_losses_bs.append(test(model, device, input_test, output_test))
+                    test_losses_bs.append(test(model_vae, model_ff, device, input_test, output_test))
 
                     if epoch < 100:
-                        scheduler.step()
+                        scheduler_vae.step()
+                        scheduler_ff.step() 
 
                 print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(learning_rate, decay, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
                 train_losses_decay.append(train_losses_bs)
@@ -161,6 +199,7 @@ def main():
         for i in range(len(variables)-1):
             input[:,i] -= torch.mean(input[:,i])
             input[:,i] /= torch.std(input[:,i])
+        input = input.reshape(-1,len_in)
         ins[j] = input
 
     for i in range(len(outs)):
@@ -169,19 +208,20 @@ def main():
         output /= torch.std(output)
         outs[i] = output
 
+    latent_dim = 10
     learning_rates = [3.15*1e-4]
     decays = [0.963]
     batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [150]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = [10]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
 
-    train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], n_in_features, nz)
+    train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], len_in, latent_dim, len_out)
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
-    torch.save(models[0].state_dict(), f"explo/models/conv_net_opt_{0}.pt")
+    #torch.save(models[0].state_dict(), f"explo/models/vae_net_opt_{0}.pt")
 
     fig,axes = plt.subplots(len(learning_rates),len(batch_sizes)*len(decays),figsize=(5*len(learning_rates),4*len(batch_sizes)*len(decays)))
 
@@ -204,7 +244,7 @@ def main():
         pass
 
     plt.show()
-    plt.savefig(f"explo/images/losses_conv_opt.png")
+    #plt.savefig(f"explo/images/losses_vae_0.png")
 
 
 if __name__ == '__main__':
