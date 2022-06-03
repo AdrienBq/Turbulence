@@ -97,7 +97,7 @@ class DNN(nn.Module):
         self.pred_net = define_net_layers(trial, "pred", input_size, output_size)[0]
 
     def forward(self, x):
-        return self.regression(x)
+        return self.pred_net(x)
 
 def test(model_vae, model_ff, device, input_test, output_test):
     model_vae.eval()
