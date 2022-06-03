@@ -190,10 +190,8 @@ def objective(trial):
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
     nz=376
 
-    len_samples = nz*len(variables)
     len_in = nz*(len(variables)-1)
     len_out = nz
-    n_in_features = len(variables)-1
 
     model_number = 11
     tmin=1
@@ -235,11 +233,11 @@ def objective(trial):
         outs[i] = output
 
     batch_size = 32             
-    nb_epochs = 50      
+    nb_epochs = 10      
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], n_in_features, nz)
+    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], len_in, len_out)
     return obj
 
 if __name__ == '__main__':
