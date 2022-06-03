@@ -60,8 +60,6 @@ def define_net_layers(trial, net, input_features, output_features):
         
     return nn.Sequential(*layers), nn.Sequential(*mu_layer), nn.Sequential(*logvar_layer)
 
-#def define_dec_layers(trial, net, input_features, output_features):
-
 
 class VAE(nn.Module):
     def __init__(self, trial, input_features, latent_features):
@@ -73,7 +71,9 @@ class VAE(nn.Module):
         self.latent_shape = latent_features
                                         
     def encode(self, x):
+        print(x.shape)
         x = self.bulk_encoder(x)
+        print(x.shape)
         mu = self.mu_layer(x)
         logvar = self.sig_layer(x)
         return mu, logvar
