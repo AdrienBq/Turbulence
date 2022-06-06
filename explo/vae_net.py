@@ -235,8 +235,8 @@ def main():
         except :
             pass
     try :
-        axes.plot(train_losses_arr[0,0,0,1:], label='train')
-        axes.plot(test_losses_arr[0,0,0,1:], label='test')
+        axes.plot(train_losses_arr[0,1:], label='train')
+        axes.plot(test_losses_arr[0,1:], label='test')
         axes.set_title(f"d = {decay_vae},{decay_ff}, lr = {lr_vae},{lr_ff}, bs = {batch_sizes[0]}")
         axes.legend()
     except :
