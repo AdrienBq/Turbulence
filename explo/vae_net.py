@@ -221,7 +221,8 @@ def main():
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
-    torch.save(models[0].state_dict(), f"explo/models/vae_net_opt_{0}.pt")
+    torch.save(models[0][0].state_dict(), f"explo/models/vae_net_opt_{0}.pt")
+    torch.save(models[0][1].state_dict(), f"explo/models/ff_net_opt_{0}.pt")
 
     fig,axes = plt.subplots(len(batch_sizes),figsize=(1,5*len(batch_sizes)))
 
