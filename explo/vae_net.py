@@ -31,8 +31,8 @@ class VAE(nn.Module):
         self.bn1 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.bn2 = nn.BatchNorm1d(h_enc_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.bn3 = nn.BatchNorm1d(h_enc_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn4 = nn.BatchNorm1d(h_dec_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn5 = nn.BatchNorm1d(z_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.bn4 = nn.BatchNorm1d(z_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.bn5 = nn.BatchNorm1d(h_dec_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.d1 = nn.Dropout(p=0.11130569507243004)
         self.d2 = nn.Dropout(p=0.12705405941207876)
         self.dmu = nn.Dropout(p=0.15014610591260366)
@@ -152,7 +152,7 @@ def train(device, lr_vae, lr_ff, decay_vae, decay_ff, batch_sizes, nb_epochs, mo
                 scheduler_vae.step()
                 scheduler_ff.step() 
 
-        print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(learning_rate, decay, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
+        print('Model {},{},{},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(lr_vae, lr_ff, decay_vae, decay_ff, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
     train_losses.append(train_losses_bs)
     test_losses.append(test_losses_bs)
 
