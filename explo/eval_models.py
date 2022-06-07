@@ -224,7 +224,7 @@ def main():
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'pca':
-            _,_,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
+            _,_,V = torch.pca_lowrank(ins[0], q=reduced_len)
             ins[1] = torch.mm(ins[1], V)
 
             model = DNN(input_size=net_params[i][0] ,output_size=net_params[i][1])
