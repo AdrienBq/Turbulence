@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm, trange
 import netCDF4 as nc
-import shap
 
 import os
 import sys
@@ -164,7 +163,7 @@ class VAE(nn.Module):
 def main():
 
     #----------------PREPARE DATA----------------
-    
+
     coarse_factors = [32]
     Directory = f"data"
 
