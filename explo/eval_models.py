@@ -217,15 +217,17 @@ def main():
     true_ds = outs[1][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
 
     for i in range(len(model_names)) :
+        input_pred = ins[1]
         name = model_names[i]
         if name == "conv" :
-            ins[1] = ins[1].reshape(-1,len(variables)-1,nz)
+            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = CNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
+
         elif name == 'pca':
-            _,_,V = torch.pca_lowrank(ins[0], q=reduced_len)
-            ins[1] = torch.mm(ins[1], V)
+            _,_,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
+            input_pred = torch.mm(ins[1], V)
 
             model = DNN(input_size=net_params[i][0] ,output_size=net_params[i][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
@@ -245,7 +247,7 @@ def main():
         model.eval()
 
         # prediction
-        print(ins[1].shape)
+        print(input_pred.shape)
         output_pred = model(ins[1])
         net_preds.append(output_pred)
 
