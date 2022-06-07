@@ -219,6 +219,7 @@ def main():
     for i in range(len(model_names)) :
         input_pred = ins[1]
         name = model_names[i]
+        print('processing model : ',name)
         if name == "conv" :
             input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = CNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
