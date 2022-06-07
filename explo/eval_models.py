@@ -9,7 +9,8 @@ import os
 import sys
 from pathlib import Path
 
-os.chdir(Path(sys.path[0]).parent)
+sys.path[0] = str(Path(sys.path[0]).parent)
+os.chdir(Path(sys.path[0]))
 import modules.utils as utils
 
 import torch
@@ -266,4 +267,5 @@ def main():
 
 
 if __name__ == '__main__':
+    print("entering main")
     main()
