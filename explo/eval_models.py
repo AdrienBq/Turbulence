@@ -69,13 +69,9 @@ class CNN(nn.Module):
                                         
 
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
-        print(x.shape)
         x = F.max_pool1d(input=self.conv1(self.bn1(x)), kernel_size=5)
-        print(x.shape)
         x = F.max_pool1d(input=self.conv2(self.bn2(x)), kernel_size=3)
-        print(x.shape)
         x = torch.flatten(x, start_dim=1,end_dim=-1)
-        print(x.shape)
         return self.regression(x)
 
 # VAE model
@@ -253,7 +249,7 @@ def main():
         # prediction
         print(input_pred.shape)
         print(model)
-        output_pred = model(ins[1])
+        output_pred = model(input_pred)
         net_preds.append(output_pred)
 
         # compute loss
