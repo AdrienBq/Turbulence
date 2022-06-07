@@ -156,8 +156,7 @@ def main():
 
     train(device, learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out)
 
-    for i in range(len(models)):
-        torch.save(models[i].state_dict(), f"explo/models/model_bash_{i}.pt")
+    torch.save(models[0].state_dict(), f"explo/models/simple_net.pt")
 
     fig,axes = plt.subplots(1,len(learning_rates),figsize=(20,4))
 
@@ -165,7 +164,7 @@ def main():
         try :
             axes[i].plot(train_losses[i][5:], label="train")
             axes[i].plot(test_losses[i][5:], label="test")
-            axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.99)")
+            axes[i].set_title(f"loss (initial lr = {learning_rates[i]}, gamma = 0.95)")
             axes[i].legend()
         except :
             pass
