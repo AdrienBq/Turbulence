@@ -221,23 +221,22 @@ def main():
         if name == "conv" :
             ins[1] = ins[1].reshape(-1,len(variables)-1,nz)
             model = CNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
-            utils.load_model('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu'))
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'pca':
             _,_,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
             ins[1] = torch.mm(ins[1], V)
 
             model = DNN(input_size=net_params[i][0] ,output_size=net_params[i][1])
-            utils.load_model('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu'))
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'simple':
             model = DNN(input_size=net_params[i][0] ,output_size=net_params[i][1])
-            utils.load_model('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu'))
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
             
         elif name == 'vae':
             model = VAE(input_features=net_params[i][0], z_dim=net_params[i][1], output_features=net_params[i][2])
-            model = utils.load_model('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu'))
-            model.eval()
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         else :
             raise Exception("One model is not supported") 
