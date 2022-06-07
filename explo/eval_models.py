@@ -252,14 +252,11 @@ def main():
         elif name == 'pca':
             _,_,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
             input_pred = torch.mm(ins[1], V)
-
             model = PCA(input_size=net_params[i][0] ,output_size=net_params[i][1])
-            print(model)
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'simple':
             model = DNN(input_size=net_params[i][0] ,output_size=net_params[i][1])
-            print(model)
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'vae':
@@ -283,7 +280,7 @@ def main():
 
     for i in range(len(model_names)) :
         pred_ds = net_preds[i][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
-        utils.plot_output(pred_ds,true_ds,L,z,'explo/images/{}_net.png'.format(model_names[i]), color='RdBu_r')
+        utils.plot_output(pred_ds,true_ds,L,z,'explo/images/eval/{}_net.png'.format(model_names[i]), color='RdBu_r')
 
 
     #----------------BASELINE MODEL----------------
