@@ -225,7 +225,6 @@ def main():
             model = CNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
-
         elif name == 'pca':
             _,_,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
             input_pred = torch.mm(ins[1], V)
@@ -243,12 +242,13 @@ def main():
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         else :
-            raise Exception("One model is not supported") 
+            raise Exception("{} model is not supported".format(name)) 
 
         model.eval()
 
         # prediction
         print(input_pred.shape)
+        print(model)
         output_pred = model(ins[1])
         net_preds.append(output_pred)
 
