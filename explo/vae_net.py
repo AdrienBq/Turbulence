@@ -21,7 +21,7 @@ print('cuda available : ', torch.cuda.is_available())
 
 # VAE model
 class VAE(nn.Module):
-    def __init__(self, input_features=2256, h_dec_dim=359, h_enc_dim=283, z_dim=11):
+    def __init__(self, input_features=2256, output_features=376, h_dec_dim=359, h_enc_dim=283, z_dim=11, drop_prob1=0.1080863832594497, drop_prob2=0.1398954543731306, drop_prob3=0.176256881097202, drop_prob4=0.19467179508996357, drop_prob5=0.19408057406110021, hidden_size1=217, hidden_size2=262, hidden_size3=490, hidden_size4=358, hidden_size5=321):
         super(VAE, self).__init__()
         self.fc1 = nn.Linear(input_features, h_enc_dim)
         self.fc2 = nn.Linear(h_enc_dim, z_dim)
@@ -38,32 +38,8 @@ class VAE(nn.Module):
         self.dmu = nn.Dropout(p=0.15014610591260366)
         self.dlog_var = nn.Dropout(p=0.44688800536582435)
 
-        
-    def encode(self, x):
-        h = F.relu(self.fc1(self.d1(self.bn1(x))))
-        return self.fc2(self.dmu(self.bn2(h))), self.fc3(self.dlog_var(self.bn3(h)))
-    
-    def reparameterize(self, mu, log_var):
-        std = torch.exp(log_var/2)
-        eps = torch.randn_like(std)
-        return mu + eps * std
-
-    def decode(self, z):
-        h = F.relu(self.fc4(self.d2(self.bn4(z))))
-        return self.fc5(self.bn5(h))
-    
-    def forward(self, x):
-        mu, log_var = self.encode(x)
-        z = self.reparameterize(mu, log_var)
-        x_reconst = self.decode(z)
-        return x_reconst, mu, log_var
-
-
-class DNN(nn.Module):
-    def __init__(self, input_size, output_size, drop_prob1=0.1080863832594497, drop_prob2=0.1398954543731306, drop_prob3=0.176256881097202, drop_prob4=0.19467179508996357, drop_prob5=0.19408057406110021, hidden_size1=217, hidden_size2=262, hidden_size3=490, hidden_size4=358, hidden_size5=321):
-        super(DNN, self).__init__()
-        self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                        nn.Linear(input_size, hidden_size1),
+        self.regression = nn.Sequential(nn.BatchNorm1d(z_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Linear(z_dim, hidden_size1),
                                         nn.ReLU(),
                                         nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob1),
@@ -83,11 +59,33 @@ class DNN(nn.Module):
                                         nn.ReLU(),
                                         nn.BatchNorm1d(hidden_size5, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob5),
-                                        nn.Linear(hidden_size5, output_size)
+                                        nn.Linear(hidden_size5, output_features)
                                         )
 
-    def forward(self, x):
-        return self.regression(x)
+        
+    def encode(self, x):
+        h = F.relu(self.fc1(self.d1(self.bn1(x))))
+        return self.fc2(self.dmu(self.bn2(h))), self.fc3(self.dlog_var(self.bn3(h)))
+    
+    def reparameterize(self, mu, log_var):
+        std = torch.exp(log_var/2)
+        eps = torch.randn_like(std)
+        return mu + eps * std
+
+    def decode(self, z):
+        h = F.relu(self.fc4(self.d2(self.bn4(z))))
+        return self.fc5(self.bn5(h))
+    
+    def forward_vae(self, x):
+        mu, log_var = self.encode(x)
+        z = self.reparameterize(mu, log_var)
+        x_reconst = self.decode(z)
+        return x_reconst, mu, log_var
+    
+    def forward(self,x):
+        mu, log_var = self.encode(x)
+        z = self.reparameterize(mu, log_var)
+        return self.regression(z)
 
 def test(model_vae, model_ff, device, input_test, output_test):
     model_vae.eval()
@@ -99,37 +97,30 @@ def test(model_vae, model_ff, device, input_test, output_test):
     test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
     return test_loss.item()
 
-def train(device, lr_vae, lr_ff, decay_vae, decay_ff, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, latent_dim, len_out):
+def train(device, lr_vae, decay_vae, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, latent_dim, len_out):
     for batch_size in batch_sizes :
         n_batches = input_train.shape[0]//batch_size
-        model_vae = VAE(input_features=len_in, z_dim=latent_dim)
-        model_ff = DNN(input_size=latent_dim, output_size=len_out)
+        model_vae = VAE(input_features=len_in, z_dim=latent_dim, output_features=len_out)
         model_vae = model_vae.to(device)
-        model_ff = model_ff.to(device)
 
         optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
         scheduler_vae = torch.optim.lr_scheduler.ExponentialLR(optimizer_vae, decay_vae, last_epoch= -1)
-        optimizer_ff = torch.optim.Adam(model_ff.parameters(), lr=lr_ff)
-        scheduler_ff = torch.optim.lr_scheduler.ExponentialLR(optimizer_ff, decay_ff, last_epoch= -1)
-        models.append([model_vae, model_ff])
+        models.append(model_vae)
 
         train_losses_bs = []
         test_losses_bs = []
         for epoch in trange(nb_epochs[0], leave=False):
             model_vae.train()
-            model_ff.train()
             tot_losses=0
             indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
             for i_batch in indexes_arr:
                 input_batch = input_train[i_batch].to(device)
                 output_batch = output_train[i_batch].to(device)
                 optimizer_vae.zero_grad()
-                optimizer_ff.zero_grad()
 
                 # forward pass
-                x_reconst, mu, log_var = model_vae(input_batch)
-                latent_input = model_vae.reparameterize(mu, log_var)
-                output_pred = model_ff(latent_input)
+                x_reconst, mu, log_var = model_vae.forward_vae(input_batch)
+                output_pred = model_vae(input_batch)
 
                 # compute loss
                 reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='sum')
@@ -141,16 +132,14 @@ def train(device, lr_vae, lr_ff, decay_vae, decay_ff, batch_sizes, nb_epochs, mo
                 # backward pass
                 loss.backward()
                 optimizer_vae.step()
-                optimizer_ff.step()
             train_losses_bs.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
             #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                             # on a une loss en moyenne 2 fois plus petite
 
-            test_losses_bs.append(test(model_vae, model_ff, device, input_test, output_test))
+            test_losses_bs.append(test(model_vae, device, input_test, output_test))
 
-            if epoch < 100:
+            if epoch < 50:
                 scheduler_vae.step()
-                scheduler_ff.step() 
 
         print('Model {},{},{},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(lr_vae, lr_ff, decay_vae, decay_ff, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
     train_losses.append(train_losses_bs)
@@ -217,12 +206,11 @@ def main():
     test_losses=[]
     models=[]
 
-    train(device, lr_vae, lr_ff, decay_vae, decay_ff, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], len_in, latent_dim, len_out)
+    train(device, lr_vae, decay_vae, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], len_in, latent_dim, len_out)
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
-    torch.save(models[0][0].state_dict(), f"explo/models/vae_net_opt_{0}.pt")
-    torch.save(models[0][1].state_dict(), f"explo/models/ff_net_opt_{0}.pt")
+    torch.save(models[0].state_dict(), f"explo/models/vae_net_opt_{1}.pt")
 
     fig,axes = plt.subplots(len(batch_sizes),figsize=(5,4*len(batch_sizes)))
 
