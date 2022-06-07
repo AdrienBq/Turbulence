@@ -20,10 +20,34 @@ import torch.nn.functional as F
 
 #----------------MODEL DEF----------------
 
-#simple and pca net model 
+#simple net model
 class DNN(nn.Module):
     def __init__(self, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=1024, hidden_size2=512, hidden_size3=256):
         super(DNN, self).__init__()
+        self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Linear(input_size, hidden_size1),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_prob1),
+                                        nn.Linear(hidden_size1, hidden_size2),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_prob2),
+                                        nn.Linear(hidden_size2, hidden_size3),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_prob3),
+                                        nn.Linear(hidden_size3, output_size)
+                                        )
+
+    
+    def forward(self, x):
+        return self.regression(x)
+
+# pca net model 
+class PCA(nn.Module):
+    def __init__(self, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=256, hidden_size2=512, hidden_size3=256):
+        super(PCA, self).__init__()
         self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Linear(input_size, hidden_size1),
                                         nn.ReLU(),
@@ -229,7 +253,7 @@ def main():
             _,_,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
             input_pred = torch.mm(ins[1], V)
 
-            model = DNN(input_size=net_params[i][0] ,output_size=net_params[i][1])
+            model = PCA(input_size=net_params[i][0] ,output_size=net_params[i][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'simple':
@@ -253,7 +277,9 @@ def main():
         net_preds.append(output_pred)
 
         # compute loss
-        losses.append(F.mse_loss(output_pred, outs[1], reduction='mean'))
+        loss = F.mse_loss(output_pred, outs[1], reduction='mean')
+        losses.append(loss)
+        print("{} loss : {}".format(name, loss))
 
     for i in range(len(model_names)) :
         pred_ds = net_preds[i][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
