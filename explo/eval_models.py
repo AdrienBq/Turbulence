@@ -216,8 +216,8 @@ def main():
         input = input.reshape(-1,len_in)
         ins[j] = input
 
-    mean_out = torch.mean(outs[0])
-    std_out = torch.std(outs[0])
+    mean_out = torch.mean(outs[0]).numpy()
+    std_out = torch.std(outs[0]).numpy()
 
     for i in range(len(outs)):
         output = outs[i]
