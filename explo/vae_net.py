@@ -87,12 +87,10 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, log_var)
         return self.regression(z)
 
-def test(model_vae, model_ff, device, input_test, output_test):
+def test(model_vae, device, input_test, output_test):
     model_vae.eval()
-    model_ff.eval()
     # prediction
-    mu, logvar = model_vae.encode(input_test.to(device))
-    output_pred = model_ff(model_vae.reparameterize(mu, logvar))
+    output_pred = model_vae(input_test.to(device))
     # compute loss
     test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
     return test_loss.item()
