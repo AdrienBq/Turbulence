@@ -209,8 +209,8 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    model_names = ["simple", "pca", "conv", "vae"]
-    net_params = [[len_in, len_out], [reduced_len, len_out], [n_in_features, len_out], [len_in,latent_dim,len_out]]
+    model_names = ["conv", "pca", "simple", "vae"]
+    net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in, len_out], [len_in,latent_dim,len_out]]
     net_preds = []
     losses = []
 
@@ -232,8 +232,9 @@ def main():
 
         elif name == 'simple':
             model = DNN(input_size=net_params[i][0] ,output_size=net_params[i][1])
+
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
-            
+
         elif name == 'vae':
             model = VAE(input_features=net_params[i][0], z_dim=net_params[i][1], output_features=net_params[i][2])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
