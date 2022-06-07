@@ -22,7 +22,7 @@ import torch.nn.functional as F
 
 #simple and pca net model 
 class DNN(nn.Module):
-    def __init__(self, batch_size, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=1024, hidden_size2=512, hidden_size3=256):
+    def __init__(self, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=1024, hidden_size2=512, hidden_size3=256):
         super(DNN, self).__init__()
         self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Linear(input_size, hidden_size1),
@@ -39,15 +39,6 @@ class DNN(nn.Module):
                                         nn.Dropout(drop_prob3),
                                         nn.Linear(hidden_size3, output_size)
                                         )
-        self.drop_prob1 = drop_prob1
-        self.drop_prob2 = drop_prob2
-        self.drop_prob3 = drop_prob3
-        self.batch_size = batch_size
-        self.input_shape = input_size
-        self.output_shape = output_size
-        self.hidden_size1 = hidden_size1
-        self.hidden_size2 = hidden_size2
-        self.hidden_size3 = hidden_size3
 
     
     def forward(self, x):
@@ -75,15 +66,6 @@ class CNN(nn.Module):
                                         nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob3),
                                         nn.Linear(hidden_size3, output_features))
-
-        self.drop_prob1 = drop_prob1
-        self.drop_prob2 = drop_prob2
-        self.drop_prob3 = drop_prob3
-        self.input_shape = int(input_features*(output_features-1)/(3*5))
-        self.output_shape = output_features
-        self.hidden_size1 = hidden_size1
-        self.hidden_size2 = hidden_size2
-        self.hidden_size3 = hidden_size3
                                         
 
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
@@ -173,6 +155,9 @@ def main():
 
     len_in = nz*(len(variables)-1)
     len_out = nz
+    latent_dim = 11
+    reduced_len = 30
+    n_in_features = len(variables)-1
 
     model_number = 11
     tmin=1
@@ -225,7 +210,7 @@ def main():
     #----------------MODEL PREDS----------------
 
     model_names = ["simple", "pca", "conv", "vae"]
-    net_params = [[], [], [], []]
+    net_params = [[len_in, len_out], [reduced_len, len_out], [n_in_features, len_out], [len_in,latent_dim,len_out]]
     net_preds = []
     losses = []
 
@@ -235,16 +220,27 @@ def main():
         name = model_names[i]
         if name == "conv" :
             ins[1] = ins[1].reshape(-1,len(variables)-1,nz)
-            model = CNN(net_params[i])
+            model = CNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
             utils.load_model('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu'))
 
-        elif name == 'pca' or name == 'simple':
-            model = DNN(net_params[i])
+        elif name == 'pca':
+            _,_,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
+            ins[1] = torch.mm(ins[1], V)
+
+            model = DNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
             utils.load_model('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu'))
-        else :
-            model = VAE(net_params[i])
+
+        elif name == 'simple':
+            model = DNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
+            utils.load_model('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu'))
+            
+        elif name == 'vae':
+            model = VAE(input_features=net_params[i][0], z_dim=net_params[i][1], output_features=net_params[i][2])
             model = utils.load_model('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu'))
             model.eval()
+
+        else :
+            raise Exception("One model is not supported") 
 
         model.eval()
 
