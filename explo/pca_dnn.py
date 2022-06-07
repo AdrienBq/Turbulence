@@ -19,9 +19,9 @@ print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
 
 
-class DNN(nn.Module):
+class PCA(nn.Module):
     def __init__(self, batch_size, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=256, hidden_size2=512, hidden_size3=256):
-        super(DNN, self).__init__()
+        super(PCA, self).__init__()
         self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Linear(input_size, hidden_size1),
                                         nn.ReLU(),

@@ -39,7 +39,7 @@ def print_one_alt(path_data,var,alt,color='RdBu_r'):
     plt.show()
 
 
-def plot_output(pred_ds,true_ds,L,z,color='RdBu'):
+def plot_output(pred_ds,true_ds,L,z,fig_name,color='RdBu'):
     '''
     ## Description
     Plot the prediction and true dataset for a given altitude
@@ -76,6 +76,60 @@ def plot_output(pred_ds,true_ds,L,z,color='RdBu'):
     
     plt.tight_layout()
     plt.show()
+    plt.savefig(fig_name)
+
+def plot_baseline(Directory, test_times, len_out, z, t, L, mean_out, std_out, color='RdBu_r'):
+    '''
+    ## Description
+    Plot the prediction and true dataset for a given altitude and returns the corresponding array
+
+    ## Parameters
+    - Directory (str) : directory where the files are stored
+    - test_times (list) : list of time instants in the test set
+    - len_out (int) : length of the output vector
+    - z (int) : altitude index
+    - L (int) : coarsening factor
+    - z (int) : altitude index
+    - mean_out (int) : mean of the output dataset
+    - std_out (int) : standard deviation of the output dataset
+    - color (str) : color map
+    '''
+    largeur = int(512/L)
+    path_data = Directory+f'/L_{L}/input_ds_for_simple_nn_T{test_times[t]}_L_{L}.nc'   #'data/L_32_new/input_ds_for_simple_nn_T10_L_32.nc'
+    nc_init = nc.Dataset(path_data)
+    true_heat_flux = nc_init[f'sample'][:].filled()[:,-len_out:][:,z].reshape(largeur,largeur)        # -len_out because : last len_out values are wtheta, z is wtheta at alt z
+    true_heat_flux -= mean_out
+    true_heat_flux /= std_out
+
+    w_arr = nc_init[f'sample'][:].filled()[:,2*len_out:3*len_out][:,z].reshape(largeur,largeur)        # variables are [u,v,w,theta,s,tka,wtheta] so 2*len_out is w
+    theta_arr = nc_init[f'sample'][:].filled()[:,3*len_out:4*len_out][:,z].reshape(largeur,largeur)    # variables are [u,v,w,theta,s,tka,wtheta] so 3*len_out is theta
+    baseline_heat_flux = w_arr*theta_arr
+    baseline_heat_flux -= mean_out
+    baseline_heat_flux /= std_out
+
+    print('Mean,min,max temperature fluctuation :',theta_arr.mean(),theta_arr.min(),theta_arr.max())
+    print('Mean,min,max true heat flux :',true_heat_flux.mean(),true_heat_flux.min(),true_heat_flux.max())
+    print('Mean,min,max baseline heat flux :',baseline_heat_flux.mean(),baseline_heat_flux.min(),baseline_heat_flux.max())
+
+    fig,axes = plt.subplots(1,3,figsize=(16,4))
+
+    im0 = axes[0].imshow(true_heat_flux , cmap = color , interpolation = 'nearest' )
+    fig.colorbar(im0, ax=axes[0], orientation='vertical', fraction=0.046, pad=0.04)
+    axes[0].set_title(f"2-D Heat Map of true w*theta at t={test_times[t]} and z={z}")
+
+    im1 = axes[1].imshow(baseline_heat_flux , cmap = color , interpolation = 'nearest' )
+    fig.colorbar(im1, ax=axes[1], orientation='vertical', fraction=0.046, pad=0.04)
+    axes[1].set_title(f"2-D Heat Map of baseline w*theta at t={test_times[t]} and z={z}")
+
+    im2 = axes[2].imshow(np.abs(true_heat_flux - baseline_heat_flux) , cmap = color , interpolation = 'nearest' )
+    fig.colorbar(im2, ax=axes[2], orientation='vertical', fraction=0.046, pad=0.04)
+    axes[2].set_title(f"Diff between objective and baseline w*theta at t={test_times[t]} and z={z}")
+
+    fig.tight_layout()
+    plt.show()
+    plt.savefig('explo/images/baseline_heat_flux.png')
+
+    return baseline_heat_flux
 
 #-------------CONCATENATE AND COARSE GRAIN-------------------------------
 
