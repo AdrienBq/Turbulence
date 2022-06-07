@@ -254,11 +254,12 @@ def main():
             input_pred = torch.mm(ins[1], V)
 
             model = PCA(input_size=net_params[i][0] ,output_size=net_params[i][1])
+            print(model)
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'simple':
             model = DNN(input_size=net_params[i][0] ,output_size=net_params[i][1])
-
+            print(model)
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'vae':
@@ -272,7 +273,6 @@ def main():
 
         # prediction
         print(input_pred.shape)
-        print(model)
         output_pred = model(input_pred)
         net_preds.append(output_pred)
 
