@@ -167,7 +167,7 @@ def objective(trial):
 
     full_len_in = nz*(len(variables)-1)
     len_in = nz
-    variable_index = 0  # in [0, 1, 2, 3, 4, 5, 6]
+    variable_index = 1  # in [0, 1, 2, 3, 4, 5, 6]
 
     model_number = 11
     tmin=1
@@ -213,7 +213,7 @@ if __name__ == '__main__':
     pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
-    study.optimize(objective, n_trials=50, timeout=10800)
+    study.optimize(objective, n_trials=30, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
