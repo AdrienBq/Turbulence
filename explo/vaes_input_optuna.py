@@ -92,9 +92,10 @@ class VAE(nn.Module):
 def test(model_vae, device, input_test):
     model_vae.eval()
     # prediction
-    x_reconst, mu, log_var = model_vae(input_test.to(device))
+    input_batch = input_test.to(device)
+    x_reconst, mu, log_var = model_vae(input_batch)
     # compute loss
-    reconst_loss = F.mse_loss(x_reconst, input_test, reduction='mean')
+    reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
     kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
     test_loss =  reconst_loss + kl_div
     return test_loss.item()
@@ -189,9 +190,7 @@ def objective(trial):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     input_train, _, input_test, _ = utils.make_train_test_ds(coarse_factors, full_len_in, train_times, test_times, Directory)
-    print(input_train.shape, input_test.shape)
     ins = [input_train.reshape(-1,len(variables)-1,nz), input_test.reshape(-1,len(variables)-1,nz)]
-    print(ins[0].shape, ins[1].shape)
 
     for j in range(len(ins)):
         input = ins[j][:,variable_index,:]
