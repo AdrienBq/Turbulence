@@ -135,7 +135,7 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
             loss = 0
             for j in range(n_in_features):
                 model = models[j]
-                input_batch = input_train[i_batch,:].to(device)
+                input_batch = input_train[i_batch][:,j,:].to(device)
                 print(input_batch.shape)
                 optimizer_vae.zero_grad()
 
