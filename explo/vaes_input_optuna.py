@@ -189,10 +189,12 @@ def objective(trial):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     input_train, _, input_test, _ = utils.make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory)
+    print(input_train.shape, input_test.shape)
     ins = [input_train.reshape(-1,len(variables)-1,nz), input_test.reshape(-1,len(variables)-1,nz)]
+    print(ins[0].shape, ins[1].shape)
 
     for j in range(len(ins)):
-        input = ins[j][variable_index]
+        input = ins[j][:,variable_index,:]
         for i in range(len(variables)-1):
             input[:,i] -= torch.mean(input[:,i])
             input[:,i] /= torch.std(input[:,i])
