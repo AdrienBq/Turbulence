@@ -130,12 +130,13 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
     for epoch in trange(nb_epochs, leave=False):
         model_vae.train()
         tot_losses=0
-        indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size, n_in_features)
+        indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
         for i_batch in indexes_arr:
             loss = 0
             for j in range(n_in_features):
                 model = models[j]
-                input_batch = input_train[i_batch,:,j].to(device)
+                input_batch = input_train[i_batch,:].to(device)
+                print(input_batch.shape)
                 optimizer_vae.zero_grad()
 
                 # forward pass
