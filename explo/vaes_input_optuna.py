@@ -164,7 +164,8 @@ def objective(trial):
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
     nz=376
 
-    len_in = nz     #nz*(len(variables)-1)
+    full_len_in = nz*(len(variables)-1)
+    len_in = nz
     len_out = nz
     variable_index = 0  # in [0, 1, 2, 3, 4, 5, 6]
 
@@ -188,7 +189,7 @@ def objective(trial):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    input_train, _, input_test, _ = utils.make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory)
+    input_train, _, input_test, _ = utils.make_train_test_ds(coarse_factors, full_len_in, train_times, test_times, Directory)
     print(input_train.shape, input_test.shape)
     ins = [input_train.reshape(-1,len(variables)-1,nz), input_test.reshape(-1,len(variables)-1,nz)]
     print(ins[0].shape, ins[1].shape)
