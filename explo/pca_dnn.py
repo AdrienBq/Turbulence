@@ -20,7 +20,27 @@ print('cuda available : ', torch.cuda.is_available())
 
 
 class PCA(nn.Module):
-    def __init__(self, batch_size, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=256, hidden_size2=512, hidden_size3=256):
+    '''
+    ## Description
+    Simple feed forward network with 3 hidden layers using linear layers, batchnorm, dropout and ReLU activation. All layers are fully connected.
+    Uses PCA to reduce the dimensionality of the input.
+    '''
+    def __init__(self, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=256, hidden_size2=512, hidden_size3=256):
+        '''
+        ## Description
+        Initialise a simple feed forward network with 3 hidden layers using linear layers, batchnorm, dropout and ReLU activation. All layers are fully connected.
+        Uses PCA to reduce the dimensionality of the input.
+
+        ## Parameters
+        - input_size (int) : number of input features (given by the PCA)
+        - output_size (int) : number of output features
+        - drop_prob1 (float) : dropout probability for the first hidden layer, default : 0.2
+        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.3
+        - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.4
+        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 256
+        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 512
+        - hidden_size3 (int) : number of neurons in the third hidden layer, default : 256
+        '''
         super(PCA, self).__init__()
         self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Linear(input_size, hidden_size1),
@@ -37,21 +57,22 @@ class PCA(nn.Module):
                                         nn.Dropout(drop_prob3),
                                         nn.Linear(hidden_size3, output_size)
                                         )
-        self.drop_prob1 = drop_prob1
-        self.drop_prob2 = drop_prob2
-        self.drop_prob3 = drop_prob3
-        self.batch_size = batch_size
-        self.input_shape = input_size
-        self.output_shape = output_size
-        self.hidden_size1 = hidden_size1
-        self.hidden_size2 = hidden_size2
-        self.hidden_size3 = hidden_size3
 
     
     def forward(self, x):
         return self.regression(x)
 
 def test(model, device, input_test, output_test):
+    '''
+    ## Description
+    Test the model on the test set.
+
+    ## Parameters
+    - model (torch.nn.Module) : the model to test
+    - device (torch.device) : the device to use (cpu / gpu)
+    - input_test (torch.tensor) : the input test set
+    - output_test (torch.tensor) : the output test set
+    '''
     model.eval()                                    # on a une loss en moyenne 2 fois plus petite
     # prediction
     output_pred = model(input_test.to(device))
@@ -60,6 +81,26 @@ def test(model, device, input_test, output_test):
     return test_loss.item()
 
 def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
+    '''
+    ## Description
+    Train the model on the training set. Loop to train multiple models with different learning rates, batch sizes and decays.
+
+    ## Parameters
+    - device (torch.device) : the device to use (cpu / gpu)
+    - learning_rates (list) : list of learning rates to use
+    - decays (list) : list of decays to use
+    - batch_sizes (list) : list of batch sizes to use
+    - nb_epochs (list) : number of epochs to train the model
+    - models (list) : empty list to store the models
+    - train_losses (list) : empty list to store the training losses
+    - test_losses (list) : empty list to store the test losses
+    - input_train (torch.tensor) : the input training set
+    - output_train (torch.tensor) : the output training set
+    - input_test (torch.tensor) : the input test set
+    - output_test (torch.tensor) : the output test set
+    - len_in (int) : length of the input
+    - len_out (int) : length of the output
+    '''
     for learning_rate in learning_rates:
         train_losses_lr = []
         test_losses_lr = []
@@ -68,7 +109,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
             test_losses_decay = []
             for batch_size in batch_sizes :
                 n_batches = input_train.shape[0]//batch_size
-                model = DNN(batch_size=batch_size,input_size=len_in,output_size=len_out)
+                model = PCA(input_size=len_in,output_size=len_out)
                 model = model.to(device)
                 print(device)
                 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -76,7 +117,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                 models.append(model)
                 train_losses_bs = []
                 test_losses_bs = []
-                for epoch in trange(nb_epochs[0], leave=False):
+                for epoch in trange(nb_epochs, leave=False):
                     model.train()
                     tot_losses=0
                     indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
@@ -112,6 +153,10 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
         test_losses.append(test_losses_lr)
 
 def main():
+    '''
+    ## Description
+    main function : create the datasets, train and test the models, save and plot the results
+    '''
     coarse_factors = [64,32,16]
     Directory = "data"
 
@@ -170,7 +215,7 @@ def main():
     learning_rates = [3*1e-3]
     decays = [0.95]
     batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [25]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 25               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]

@@ -288,6 +288,11 @@ def main():
     baseline_heat_flux = utils.plot_baseline(Directory, test_times, len_out, z, t, L, mean_out, std_out)
 
 
+    #----------------L COMPARISON---------------
+
+    
+
+
 if __name__ == '__main__':
     print("entering main")
     main()

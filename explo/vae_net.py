@@ -21,7 +21,42 @@ print('cuda available : ', torch.cuda.is_available())
 
 # VAE model
 class VAE(nn.Module):
-    def __init__(self, input_features=2256, output_features=376, h_dec_dim=359, h_enc_dim=283, z_dim=11, drop_prob1=0.1080863832594497, drop_prob2=0.1398954543731306, drop_prob3=0.176256881097202, drop_prob4=0.19467179508996357, drop_prob5=0.19408057406110021, hidden_size1=217, hidden_size2=262, hidden_size3=490, hidden_size4=358, hidden_size5=321):
+    '''
+    ## Description
+    Double neural network combining a VAE with a simple feedforward network. 
+    The point is to reduce the dimension of the input of the input by using a VAE. 
+    The VAE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
+    '''
+    def __init__(self, input_features=2256, output_features=376, h_dec_dim=359, h_enc_dim=283, z_dim=11, 
+                drop_prob1=0.1080863832594497, drop_prob2=0.1398954543731306, drop_prob3=0.176256881097202, drop_prob4=0.19467179508996357, drop_prob5=0.19408057406110021, 
+                drop_prob6 = 0.11130569507243004, drop_prob7=0.12705405941207876, drop_prob8=0.15014610591260366, drop_prob9=0.44688800536582435,
+                hidden_size1=217, hidden_size2=262, hidden_size3=490, hidden_size4=358, hidden_size5=321):
+        '''
+        ## Description
+        Double neural network combining a VAE with a simple feedforward network. 
+        The point is to reduce the dimension of the input of the input by using a VAE. 
+        The VAE maps the input to a gaussian latent space and the feedforward network maps the latent space to the output to predict fluxes.
+        The hyperparameters were optimized using the vae_net_optuna.py script.
+        The VAE uses fully connected layers with batchnorm, dropout and relu activation functions. It has one hidden layer for the encoder and one hidden layer for the decoder.
+        The feedforward network uses fully connected layers with batchnorm, dropout and relu activation functions. It has 5 hidden layer.
+
+        ## Parameters
+        - input_features: number of input features (input of the VAE)
+        - output_features: number of output features (output of the feedforward network)
+        - h_dec_dim: number of hidden units in the decoder, default is 359
+        - h_enc_dim: number of hidden units in the encoder, default is 283
+        - z_dim: dimension of the latent space, default is 11
+        - drop_prob1: dropout probability for the first hidden layer of the predicting network, default is 0.1080863832594497
+        - drop_prob2: dropout probability for the second hidden layer of the predicting network, default is 0.1398954543731306
+        - drop_prob3: dropout probability for the third hidden layer of the predicting network, default is 0.176256881097202
+        - drop_prob4: dropout probability for the fourth hidden layer of the predicting network, default is 0.19467179508996357
+        - drop_prob5: dropout probability for the fifth hidden layer of the predicting network, default is 0.19408057406110021
+        - drop_prob6: dropout probability for the hidden layer of the encoder, default is 0.11130569507243004
+        - drop_prob7: dropout probability for the hidden layer of the decoder, default is 0.12705405941207876
+        - drop_prob8: dropout probability for the layer outputing mu, default is 0.15014610591260366
+        - drop_prob9: dropout probability for the layer outputing sigma, default is 0.44688800536582435
+
+        '''
         super(VAE, self).__init__()
         self.fc1 = nn.Linear(input_features, h_enc_dim)
         self.fc2 = nn.Linear(h_enc_dim, z_dim)
@@ -33,10 +68,10 @@ class VAE(nn.Module):
         self.bn3 = nn.BatchNorm1d(h_enc_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.bn4 = nn.BatchNorm1d(z_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.bn5 = nn.BatchNorm1d(h_dec_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.d1 = nn.Dropout(p=0.11130569507243004)
-        self.d2 = nn.Dropout(p=0.12705405941207876)
-        self.dmu = nn.Dropout(p=0.15014610591260366)
-        self.dlog_var = nn.Dropout(p=0.44688800536582435)
+        self.d1 = nn.Dropout(drop_prob6)
+        self.d2 = nn.Dropout(drop_prob7)
+        self.dmu = nn.Dropout(drop_prob8)
+        self.dlog_var = nn.Dropout(drop_prob9)
 
         self.regression = nn.Sequential(nn.BatchNorm1d(z_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Linear(z_dim, hidden_size1),
@@ -88,6 +123,16 @@ class VAE(nn.Module):
         return self.regression(z)
 
 def test(model_vae, device, input_test, output_test):
+    '''
+    ## Description
+    Test the model on the test set.
+
+    ## Parameters
+    - model (torch.nn.Module) : the model to test
+    - device (torch.device) : the device to use (cpu / gpu)
+    - input_test (torch.tensor) : the input test set
+    - output_test (torch.tensor) : the output test set
+    '''
     model_vae.eval()
     # prediction
     output_pred = model_vae(input_test.to(device))
@@ -96,6 +141,27 @@ def test(model_vae, device, input_test, output_test):
     return test_loss.item()
 
 def train(device, lr_vae, decay_vae, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, latent_dim, len_out):
+    '''
+    ## Description
+    Train the model on the training set. Loop to train multiple models with different batch sizes.
+
+    ## Parameters
+    - device: the device to use for the model
+    - lr_vae: the learning rate for the model
+    - decay_vae: the learning rate decay for the model
+    - batch_sizes (list) : list of batch sizes to use
+    - nb_epochs (list) : number of epochs to train the model
+    - models (list) : empty list to store the models
+    - train_losses (list) : empty list to store the training losses
+    - test_losses (list) : empty list to store the test losses
+    - input_train (torch.Tensor) : the training input data
+    - output_train (torch.Tensor) : the training output data
+    - input_test (torch.Tensor) : the test input data
+    - output_test (torch.Tensor) : the test output data
+    - len_in (int) : the length of the input data (here it's the number of input channels of the first convolutional layer)
+    - latent_dim (int) : the dimension of the latent space
+    - len_out (int) : the length of the output data
+    '''
     for batch_size in batch_sizes :
         n_batches = input_train.shape[0]//batch_size
         model_vae = VAE(input_features=len_in, z_dim=latent_dim, output_features=len_out)
@@ -145,6 +211,10 @@ def train(device, lr_vae, decay_vae, batch_sizes, nb_epochs, models, train_losse
 
 
 def main():
+    '''
+    ## Description
+    main function : create the datasets, train and test the models, save and plot the results
+    '''
     coarse_factors = [32]
     Directory = f"data"
 

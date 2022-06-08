@@ -20,7 +20,25 @@ print('cuda available : ', torch.cuda.is_available())
 
 
 class DNN(nn.Module):
-    def __init__(self, batch_size, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=1024, hidden_size2=512, hidden_size3=256):
+    '''
+    ## Description
+    Simple feed forward network with 3 hidden layers using linear layers, batchnorm, dropout and ReLU activation. All layers are fully connected.
+    '''
+    def __init__(self, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=1024, hidden_size2=512, hidden_size3=256):
+        '''
+        ## Description
+        initialise a simple feed forward network with 3 hidden layers using linear layers, batchnorm, dropout and ReLU activation. All lyaers are fully connected.
+
+        ## Parameters
+        - input_size (int) : number of input features
+        - output_size (int) : number of output features
+        - drop_prob1 (float) : dropout probability for the first hidden layer, default : 0.2
+        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.3
+        - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.4
+        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 1024
+        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 512
+        - hidden_size3 (int) : number of neurons in the third hidden layer, default : 256
+        '''
         super(DNN, self).__init__()
         self.regression = nn.Sequential(nn.BatchNorm1d(input_size, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Linear(input_size, hidden_size1),
@@ -37,21 +55,21 @@ class DNN(nn.Module):
                                         nn.Dropout(drop_prob3),
                                         nn.Linear(hidden_size3, output_size)
                                         )
-        self.drop_prob1 = drop_prob1
-        self.drop_prob2 = drop_prob2
-        self.drop_prob3 = drop_prob3
-        self.batch_size = batch_size
-        self.input_shape = input_size
-        self.output_shape = output_size
-        self.hidden_size1 = hidden_size1
-        self.hidden_size2 = hidden_size2
-        self.hidden_size3 = hidden_size3
-
     
     def forward(self, x):
         return self.regression(x)
 
 def test(model, device, input_test, output_test):
+    '''
+    ## Description
+    test the model on the test set
+
+    ## Parameters
+    - model (torch.nn.Module) : the model to test
+    - device (torch.device) : the device on which the model is trained
+    - input_test (torch.Tensor) : the input test set
+    - output_test (torch.Tensor) : the output test set
+    '''
     model.eval()                                    # on a une loss en moyenne 2 fois plus petite
     # prediction
     output_pred = model(input_test.to(device))
@@ -60,8 +78,28 @@ def test(model, device, input_test, output_test):
     return test_loss.item()
 
 def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, batch_size, n_batches, len_in, len_out):
+    '''
+    ## Description
+    train the model on the training set. Loop to train different models with different learning rates.
+
+    ## Parameters
+    - device (torch.device) : the device on which the model is trained
+    - learning_rates (list) : the learning rates to use for the optimizer
+    - nb_epochs (list) : the number of epochs to train the model with each learning rate
+    - models (list) : empty list to store the models
+    - train_losses (list) : empty list to store the training losses
+    - test_losses (list) : empty list to store the test losses
+    - input_train (torch.Tensor) : the input training set
+    - output_train (torch.Tensor) : the output training set
+    - input_test (torch.Tensor) : the input test set
+    - output_test (torch.Tensor) : the output test set
+    - batch_size (int) : the batch size to use for training
+    - n_batches (int) : the number of batches to use for training
+    - len_in (int) : the length of the input sequence
+    - len_out (int) : the length of the output sequence
+    '''
     for i in range(len(learning_rates)):
-        model = DNN(batch_size=batch_size,input_size=len_in,output_size=len_out)
+        model = DNN(input_size=len_in,output_size=len_out)
         model = model.to(device)
         print(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rates[i])
@@ -101,6 +139,10 @@ def train(device, learning_rates, nb_epochs, models, train_losses, test_losses, 
         print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs[i], tot_losses/n_batches))
 
 def main():
+    '''
+    ## Description
+    main function : create the datasets, train and test the models, save and plot the results
+    '''
     coarse_factors = [64,32,16]
     Directory = "data"
 

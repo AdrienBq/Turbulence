@@ -20,7 +20,28 @@ print('cuda available : ', torch.cuda.is_available())
 
 
 class CNN(nn.Module):
+    '''
+    ## Description
+    Convolutional neural network with 2 convolutional layers and 4 fully connected layers. 
+    Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
+    '''
     def __init__(self, input_features, output_features, drop_prob1=0.301, drop_prob2=0.121, drop_prob3=0.125, hidden_size1=288, hidden_size2=471, hidden_size3=300):
+        '''
+        ## Description
+        Convolutional neural network with 2 convolutional layers and 4 fully connected layers. 
+        Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
+        Parameters are optimized using Optuna in the conv_net_optuna.py file.
+
+        ## Parameters
+        - input_features (int) : number of input features (number of input channels of the first convolutional layer)
+        - output_features (int) : number of output features (size of the output of the last linear layer)
+        - drop_prob1 (float) : dropout probability for the first hidden layer, default : 0.301
+        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.121
+        - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.125
+        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 288
+        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 471
+        - hidden_size3 (int) : number of neurons in the third hidden layer, default : 300
+        '''
         super(CNN, self).__init__()
         self.conv1 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True)
         self.conv2 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
@@ -40,15 +61,6 @@ class CNN(nn.Module):
                                         nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob3),
                                         nn.Linear(hidden_size3, output_features))
-
-        self.drop_prob1 = drop_prob1
-        self.drop_prob2 = drop_prob2
-        self.drop_prob3 = drop_prob3
-        self.input_shape = int(input_features*(output_features-1)/(3*5))
-        self.output_shape = output_features
-        self.hidden_size1 = hidden_size1
-        self.hidden_size2 = hidden_size2
-        self.hidden_size3 = hidden_size3
                                         
 
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
@@ -58,6 +70,16 @@ class CNN(nn.Module):
         return self.regression(x)
 
 def test(model, device, input_test, output_test):
+    '''
+    ## Description
+    Test the model on the test set.
+
+    ## Parameters
+    - model (torch.nn.Module) : the model to test
+    - device (torch.device) : the device to use (cpu / gpu)
+    - input_test (torch.tensor) : the input test set
+    - output_test (torch.tensor) : the output test set
+    '''
     model.eval()
     # prediction
     output_pred = model(input_test.to(device))
@@ -66,6 +88,26 @@ def test(model, device, input_test, output_test):
     return test_loss.item()
 
 def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
+    '''
+    ## Description
+    Train the model on the training set. Loop to train multiple models with different learning rates, batch sizes and decays.
+
+    ## Parameters
+    - device: the device to use for the model
+    - learning_rates (list) : list of learning rates to use
+    - decays (list) : list of decays to use
+    - batch_sizes (list) : list of batch sizes to use
+    - nb_epochs (list) : number of epochs to train the model
+    - models (list) : empty list to store the models
+    - train_losses (list) : empty list to store the training losses
+    - test_losses (list) : empty list to store the test losses
+    - input_train (torch.Tensor) : the training input data
+    - output_train (torch.Tensor) : the training output data
+    - input_test (torch.Tensor) : the test input data
+    - output_test (torch.Tensor) : the test output data
+    - len_in (int) : the length of the input data (here it's the number of input channels of the first convolutional layer)
+    - len_out (int) : the length of the output data
+    '''
     for learning_rate in learning_rates:
         train_losses_lr = []
         test_losses_lr = []
@@ -120,6 +162,10 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
 
 
 def main():
+    '''
+    ## Description
+    main function : create the datasets, train and test the models, save and plot the results
+    '''
     coarse_factors = [32]
     Directory = f"data"
 
