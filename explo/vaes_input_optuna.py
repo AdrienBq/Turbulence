@@ -71,7 +71,6 @@ class VAE(nn.Module):
         self.latent_shape = latent_features
                                         
     def encode(self, x):
-        print(x.shape)
         x = self.bulk_encoder(x)
         mu = self.mu_layer(x)
         logvar = self.sig_layer(x)
@@ -90,15 +89,16 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-def test(model_vae, device, input_test):
-    model_vae.eval()
-    # prediction
-    input_batch = input_test.to(device)
-    x_reconst, mu, log_var = model_vae(input_batch)
-    # compute loss
-    reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
-    kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-    test_loss =  reconst_loss + kl_div
+def test(models, device, input_test):
+    test_loss = 0
+    for j in range(len(models)):
+        # prediction
+        input_batch = input_test[:,j,:].to(device)
+        x_reconst, mu, log_var = models[j](input_batch)
+        # compute loss
+        reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
+        kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+        test_loss +=  reconst_loss + kl_div
     return test_loss.item()
 
 def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
@@ -158,7 +158,7 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
         #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                         # on a une loss en moyenne 2 fois plus petite
 
-        test_losses.append(test(model_vae, device, input_test))
+        test_losses.append(test(models, device, input_test))
 
         if epoch < 100:
             scheduler_vae.step()
