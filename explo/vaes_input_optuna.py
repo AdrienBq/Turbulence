@@ -166,7 +166,6 @@ def objective(trial):
 
     full_len_in = nz*(len(variables)-1)
     len_in = nz
-    len_out = nz
     variable_index = 0  # in [0, 1, 2, 3, 4, 5, 6]
 
     model_number = 11
@@ -206,7 +205,7 @@ def objective(trial):
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in, len_out)
+    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     return obj
 
 if __name__ == '__main__':
