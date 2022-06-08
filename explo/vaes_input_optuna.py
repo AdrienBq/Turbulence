@@ -71,6 +71,7 @@ class VAE(nn.Module):
         self.latent_shape = latent_features
                                         
     def encode(self, x):
+        print(x.shape)
         x = self.bulk_encoder(x)
         mu = self.mu_layer(x)
         logvar = self.sig_layer(x)
