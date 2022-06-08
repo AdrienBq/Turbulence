@@ -100,7 +100,7 @@ def test(model_vae, device, input_test):
     test_loss =  reconst_loss + kl_div
     return test_loss.item()
 
-def train(device, n_in_features, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
+def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
 
     latent_dim = trial.suggest_int("latent_dim", 2, 10)
 
@@ -130,12 +130,12 @@ def train(device, n_in_features, trial, batch_size, nb_epochs, train_losses, tes
     for epoch in trange(nb_epochs, leave=False):
         model_vae.train()
         tot_losses=0
-        indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
+        indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size, n_in_features)
         for i_batch in indexes_arr:
             loss = 0
             for j in range(n_in_features):
                 model = models[j]
-                input_batch = input_train[i_batch].to(device)
+                input_batch = input_train[i_batch,:,j].to(device)
                 optimizer_vae.zero_grad()
 
                 # forward pass
