@@ -89,34 +89,24 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-class DNN(nn.Module):
-    def __init__(self, trial, input_size, output_size):
-        super(DNN, self).__init__()
-        self.pred_net = define_net_layers(trial, "pred", input_size, output_size)[0]
-
-    def forward(self, x):
-        return self.pred_net(x)
-
-def test(model_vae, model_ff, device, input_test, output_test):
+def test(model_vae, device, input_test):
     model_vae.eval()
-    model_ff.eval()
     # prediction
-    mu, logvar = model_vae.encode(input_test.to(device))
-    output_pred = model_ff(model_vae.reparameterize(mu, logvar))
+    x_reconst, mu, log_var = model_vae(input_test.to(device))
     # compute loss
-    test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
+    reconst_loss = F.mse_loss(x_reconst, input_test, reduction='mean')
+    kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+    test_loss =  reconst_loss + kl_div
     return test_loss.item()
 
-def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
+def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
 
-    latent_dim = trial.suggest_int("latent_dim", 5, 20)
+    latent_dim = trial.suggest_int("latent_dim", 2, 10)
 
     # define model
     n_batches = input_train.shape[0]//batch_size
     model_vae = VAE(trial, input_features=len_in, latent_features=latent_dim)
-    model_ff = DNN(trial, input_size=latent_dim, output_size=len_out)
     model_vae = model_vae.to(device)
-    model_ff = model_ff.to(device)
 
     # Generate the optimizers.
     decay_vae = trial.suggest_float("decay_vae", 0.9, 0.99,)
@@ -124,50 +114,39 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
     optimizer_name = "Adam"
     lr_vae = trial.suggest_float("lr_vae", 1e-5, 1e-2, log=True)
     optimizer_vae = getattr(optim, optimizer_name)(model_vae.parameters(), lr=lr_vae)
-    optimizer_ff = getattr(optim, optimizer_name)(model_ff.parameters(), lr=lr_vae)
 
     optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
     scheduler_vae = torch.optim.lr_scheduler.ExponentialLR(optimizer_vae, decay_vae, last_epoch= -1)
-    optimizer_ff = torch.optim.Adam(model_ff.parameters(), lr=lr_vae)
-    scheduler_ff = torch.optim.lr_scheduler.ExponentialLR(optimizer_ff, decay_vae, last_epoch= -1)
 
     for epoch in trange(nb_epochs, leave=False):
         model_vae.train()
-        model_ff.train()
         tot_losses=0
         indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
         for i_batch in indexes_arr:
             input_batch = input_train[i_batch].to(device)
-            output_batch = output_train[i_batch].to(device)
             optimizer_vae.zero_grad()
-            optimizer_ff.zero_grad()
 
             # forward pass
             x_reconst, mu, log_var = model_vae(input_batch)
-            latent_input = model_vae.reparameterize(mu, log_var)
-            output_pred = model_ff(latent_input)
 
             # compute loss
-            reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='sum')
+            reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
             kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-            flux_pred_loss = F.mse_loss(output_pred, output_batch, reduction='mean')
-            loss =  flux_pred_loss + reconst_loss + kl_div
-            tot_losses += flux_pred_loss.item()
+            loss =  reconst_loss + kl_div
+            tot_losses += loss.item()
 
             # backward pass
             loss.backward()
             optimizer_vae.step()
-            optimizer_ff.step()
 
         train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
         #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                         # on a une loss en moyenne 2 fois plus petite
 
-        test_losses.append(test(model_vae, model_ff, device, input_test, output_test))
+        test_losses.append(test(model_vae, device, input_test))
 
         if epoch < 100:
             scheduler_vae.step()
-            scheduler_ff.step()
 
         trial.report(test_losses[-1], epoch)
 
@@ -185,8 +164,9 @@ def objective(trial):
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
     nz=376
 
-    len_in = nz*(len(variables)-1)
+    len_in = nz     #nz*(len(variables)-1)
     len_out = nz
+    variable_index = 0  # in [0, 1, 2, 3, 4, 5, 6]
 
     model_number = 11
     tmin=1
@@ -208,31 +188,22 @@ def objective(trial):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    input_train, output_train, input_test, output_test = utils.make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory)
-    ins = [input_train, input_test]
-    outs = [output_train, output_test]
+    input_train, _, input_test, _ = utils.make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory)
+    ins = [input_train.reshape(-1,len(variables)-1,nz), input_test.reshape(-1,len(variables)-1,nz)]
 
     for j in range(len(ins)):
-        input = ins[j]
-        input = input.reshape(-1,len(variables)-1,nz)
+        input = ins[j][variable_index]
         for i in range(len(variables)-1):
             input[:,i] -= torch.mean(input[:,i])
             input[:,i] /= torch.std(input[:,i])
-        input = input.reshape(-1,len_in)
         ins[j] = input
-
-    for i in range(len(outs)):
-        output = outs[i]
-        output -= torch.mean(output)
-        output /= torch.std(output)
-        outs[i] = output
 
     batch_size = 32             
     nb_epochs = 50      
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], len_in, len_out)
+    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in, len_out)
     return obj
 
 if __name__ == '__main__':

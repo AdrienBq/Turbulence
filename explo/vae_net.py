@@ -24,7 +24,7 @@ class VAE(nn.Module):
     '''
     ## Description
     Double neural network combining a VAE with a simple feedforward network. 
-    The point is to reduce the dimension of the input of the input by using a VAE. 
+    The point is to reduce the dimension of the input by using a VAE. 
     The VAE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
     '''
     def __init__(self, input_features=2256, output_features=376, h_dec_dim=359, h_enc_dim=283, z_dim=11, 
@@ -34,7 +34,7 @@ class VAE(nn.Module):
         '''
         ## Description
         Double neural network combining a VAE with a simple feedforward network. 
-        The point is to reduce the dimension of the input of the input by using a VAE. 
+        The point is to reduce the dimension of the input by using a VAE. 
         The VAE maps the input to a gaussian latent space and the feedforward network maps the latent space to the output to predict fluxes.
         The hyperparameters were optimized using the vae_net_optuna.py script.
         The VAE uses fully connected layers with batchnorm, dropout and relu activation functions. It has one hidden layer for the encoder and one hidden layer for the decoder.
@@ -55,7 +55,6 @@ class VAE(nn.Module):
         - drop_prob7: dropout probability for the hidden layer of the decoder, default is 0.12705405941207876
         - drop_prob8: dropout probability for the layer outputing mu, default is 0.15014610591260366
         - drop_prob9: dropout probability for the layer outputing sigma, default is 0.44688800536582435
-
         '''
         super(VAE, self).__init__()
         self.fc1 = nn.Linear(input_features, h_enc_dim)
