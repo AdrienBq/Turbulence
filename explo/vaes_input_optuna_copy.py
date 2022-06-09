@@ -92,7 +92,7 @@ class VAE(nn.Module):
 def test(model, device, input_test):
     model.eval()
     # prediction
-    input_batch = input_test[:,j,:].to(device)
+    input_batch = input_test.to(device)
     x_reconst, mu, log_var = model(input_batch)
     # compute loss
     reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
@@ -160,7 +160,7 @@ def objective(trial):
     Directory = f"data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
-    var = 0
+    var = 1
     nz=376
 
     full_len_in = nz*(len(variables)-1)
