@@ -94,11 +94,9 @@ def test(model, device, input_test):
     # prediction
     input_batch = input_test.to(device)
     x_reconst, mu, log_var = model(input_batch)
-    print('mu : ', mu, 'log_var : ', log_var)
     # compute loss
     reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
     kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-    print("reconst_loss : ", reconst_loss.item(), "kl_div : ", kl_div.item())
     test_loss =  reconst_loss + kl_div
     return test_loss.item()
 
