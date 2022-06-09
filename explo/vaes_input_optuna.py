@@ -92,9 +92,11 @@ class VAE(nn.Module):
 def test(models, device, input_test):
     test_loss = 0
     for j in range(len(models)):
+        model = models[j]
+        model.eval()
         # prediction
         input_batch = input_test[:,j,:].to(device)
-        x_reconst, mu, log_var = models[j](input_batch)
+        x_reconst, mu, log_var = model(input_batch)
         # compute loss
         reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
         kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
@@ -129,15 +131,15 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
         schedulers.append(scheduler_vae)
 
     for epoch in trange(nb_epochs, leave=False):
-        model_vae.train()
-        tot_losses=0
-        indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
-        for i_batch in indexes_arr:
-            loss = 0
-            for j in range(n_in_features):
+        for j in range(n_in_features):
+            tot_losses=0
+            indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
+            model = models[j]
+            model.train()
+            optimizer = optimizers[j]
+            for i_batch in indexes_arr:
                 model = models[j]
                 input_batch = input_train[i_batch][:,j,:].to(device)
-                optimizer_vae.zero_grad()
 
                 # forward pass
                 x_reconst, mu, log_var = model(input_batch)
@@ -145,13 +147,11 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
                 # compute loss
                 reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
                 kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-                loss +=  reconst_loss + kl_div
+                loss =  reconst_loss + kl_div
                 tot_losses += loss.item()
 
-            # backward pass
-            loss.backward()
-            for j in range(n_in_features):
-                optimizer = optimizers[j]
+                # backward pass
+                loss.backward()
                 optimizer.step()
 
         train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
