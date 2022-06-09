@@ -23,7 +23,7 @@ print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
 
 
-def define_net_layers(trial, net, input_features, output_features):
+def define_net_layers(trial, var, net, input_features, output_features):
     # We optimize the number of linear layers, hidden units and dropout ratio in each layer.
     n_lins = trial.suggest_int("n_{}_layers".format(net), 1, 5)
     layers = []
@@ -33,9 +33,9 @@ def define_net_layers(trial, net, input_features, output_features):
     in_features = input_features
 
     for i in range(n_lins):
-        out_features = trial.suggest_int("n_{}_units_l{}".format(net,i), 64, 512)
+        out_features = trial.suggest_int("n_{}_{}_units_l{}".format(var,net,i), 64, 512)
         layers.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-        p = trial.suggest_float("{}_dropout_l{}".format(net,i), 0.1, 0.5)
+        p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,i), 0.1, 0.5)
         layers.append(nn.Dropout(p))
         layers.append(nn.Linear(in_features, out_features))
         layers.append(nn.ReLU())
@@ -54,7 +54,7 @@ def define_net_layers(trial, net, input_features, output_features):
     
     else :
         layers.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-        p = trial.suggest_float("{}_dropout_l{}".format(net,i), 0.1, 0.5)
+        p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,i), 0.1, 0.5)
         layers.append(nn.Dropout(p))
         layers.append(nn.Linear(in_features, output_features))
         
@@ -62,10 +62,10 @@ def define_net_layers(trial, net, input_features, output_features):
 
 
 class VAE(nn.Module):
-    def __init__(self, trial, input_features, latent_features):
+    def __init__(self, trial, var, input_features, latent_features):
         super(VAE, self).__init__()
-        self.bulk_encoder, self.mu_layer, self.sig_layer = define_net_layers(trial, "enc", input_features, latent_features)
-        self.decoder = define_net_layers(trial, "dec", latent_features, input_features)[0]
+        self.bulk_encoder, self.mu_layer, self.sig_layer = define_net_layers(trial, var, "enc", input_features, latent_features)
+        self.decoder = define_net_layers(trial, var, "dec", latent_features, input_features)[0]
 
         self.input_shape = input_features
         self.latent_shape = latent_features
@@ -102,7 +102,7 @@ def test(models, device, input_test):
         test_loss +=  reconst_loss + kl_div
     return test_loss.item()
 
-def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
+def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
 
     latent_dim = trial.suggest_int("latent_dim", 2, 10)
 
@@ -115,10 +115,10 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
     models = []
     optimizers = []
     schedulers = []
-    for i  in range(n_in_features):
+    for var  in variables:
         # define model
         n_batches = input_train.shape[0]//batch_size
-        model_vae = VAE(trial, input_features=len_in, latent_features=latent_dim)
+        model_vae = VAE(trial, var, input_features=len_in, latent_features=latent_dim)
         model_vae = model_vae.to(device)
         optimizer_vae = getattr(optim, optimizer_name)(model_vae.parameters(), lr=lr_vae)
 
@@ -131,7 +131,7 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
 
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
-        for j in range(n_in_features):
+        for j in range(len(variables)):
             indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
             models[j].train()
             for i_batch in indexes_arr:
@@ -156,7 +156,7 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
         test_losses.append(test(models, device, input_test))
 
         if epoch < 100:
-            for j in range(n_in_features):
+            for j in range(len(variables)):
                 schedulers[j].step()
 
         trial.report(test_losses[-1], epoch)
@@ -214,7 +214,7 @@ def objective(trial):
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
+    obj = train(device, trial, variables[:-1], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     return obj
 
 if __name__ == '__main__':
