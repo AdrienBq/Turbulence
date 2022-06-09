@@ -156,7 +156,8 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
         test_losses.append(test(models, device, input_test))
 
         if epoch < 100:
-            scheduler_vae.step()
+            for j in range(n_in_features):
+                schedulers[j].step()
 
         trial.report(test_losses[-1], epoch)
 
@@ -208,8 +209,8 @@ def objective(trial):
             input[:,i] /= torch.std(input[:,i])
         ins[j] = input
 
-    batch_size = 32             
-    nb_epochs = 5      
+    batch_size = 32
+    nb_epochs = 5
     train_losses=[]
     test_losses=[]
 
