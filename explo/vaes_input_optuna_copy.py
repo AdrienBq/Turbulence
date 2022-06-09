@@ -94,9 +94,11 @@ def test(model, device, input_test):
     # prediction
     input_batch = input_test.to(device)
     x_reconst, mu, log_var = model(input_batch)
+    print('mu : ', mu, 'log_var : ', log_var)
     # compute loss
     reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
     kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+    print("reconst_loss : ", reconst_loss.item(), "kl_div : ", kl_div.item())
     test_loss =  reconst_loss + kl_div
     return test_loss.item()
 
@@ -109,10 +111,10 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
     model_vae = model_vae.to(device)
 
     # Generate the optimizers.
-    decay_vae = 0.9047942234621627 #trial.suggest_float("decay_vae", 0.9, 0.99,)
+    decay_vae = 0.9 #trial.suggest_float("decay_vae", 0.9, 0.99,)
     #optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
     optimizer_name = "Adam"
-    lr_vae = 0.006764937328655584 #trial.suggest_float("lr_vae", 1e-5, 1e-2, log=True)
+    lr_vae = 1e-4 #trial.suggest_float("lr_vae", 1e-5, 1e-3, log=True)
     optimizer_vae = getattr(optim, optimizer_name)(model_vae.parameters(), lr=lr_vae)
 
     optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
@@ -192,13 +194,12 @@ def objective(trial):
 
     for j in range(len(ins)):
         input = ins[j][:,var,:]
-        for i in range(len(variables)-1):
-            input[:,i] -= torch.mean(input[:,i])
-            input[:,i] /= torch.std(input[:,i])
+        input -= torch.mean(input)
+        input /= torch.std(input)
         ins[j] = input
 
     batch_size = 32
-    nb_epochs = 10
+    nb_epochs = 50
     train_losses=[]
     test_losses=[]
 
