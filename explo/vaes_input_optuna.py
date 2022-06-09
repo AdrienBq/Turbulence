@@ -117,10 +117,10 @@ def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_lo
         model_vae = model_vae.to(device)
 
         # Generate the optimizers.
-        decay_vae = 0.9 #trial.suggest_float("{}_decay_vae".format(var), 0.9, 0.99,)
+        decay_vae = trial.suggest_float("{}_decay_vae".format(var), 0.9, 0.99,)
         #optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
         optimizer_name = "Adam"
-        lr_vae = 1e-4 #trial.suggest_float("{}_lr_vae".format(var), 1e-5, 1e-3, log=True)
+        lr_vae = trial.suggest_float("{}_lr_vae".format(var), 1e-5, 1e-3, log=True)
         optimizer_vae = getattr(optim, optimizer_name)(model_vae.parameters(), lr=lr_vae)
 
         optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
