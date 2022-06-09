@@ -25,7 +25,7 @@ print('cuda available : ', torch.cuda.is_available())
 
 def define_net_layers(trial, net, input_features, output_features):
     # We optimize the number of linear layers, hidden units and dropout ratio in each layer.
-    n_lins = trial.suggest_int("n_layers", 1, 5)
+    n_lins = trial.suggest_int("n_layers", 3, 5)
     layers = []
     mu_layer = []
     logvar_layer = []
@@ -102,17 +102,17 @@ def test(model, device, input_test):
 
 def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
 
-    latent_dim = trial.suggest_int("latent_dim", 2, 10)
+    latent_dim = 2 #trial.suggest_int("latent_dim", 2, 5)
     # define model
     n_batches = input_train.shape[0]//batch_size
     model_vae = VAE(trial, input_features=len_in, latent_features=latent_dim)
     model_vae = model_vae.to(device)
 
     # Generate the optimizers.
-    decay_vae = trial.suggest_float("decay_vae", 0.9, 0.99,)
+    decay_vae = 0.9047942234621627 #trial.suggest_float("decay_vae", 0.9, 0.99,)
     #optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
     optimizer_name = "Adam"
-    lr_vae = trial.suggest_float("lr_vae", 1e-5, 1e-2, log=True)
+    lr_vae = 0.006764937328655584 #trial.suggest_float("lr_vae", 1e-5, 1e-2, log=True)
     optimizer_vae = getattr(optim, optimizer_name)(model_vae.parameters(), lr=lr_vae)
 
     optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
@@ -160,7 +160,7 @@ def objective(trial):
     Directory = f"data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
-    var = 1
+    var = 0     # 0 = u, 1 = v, 2 = w, 3 = theta, 4 = s, 5 = tke, 6 = wtheta
     nz=376
 
     full_len_in = nz*(len(variables)-1)
