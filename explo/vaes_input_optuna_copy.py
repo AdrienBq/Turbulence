@@ -124,6 +124,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
         for i_batch in indexes_arr:
             model_vae.train()
             input_batch = input_train[i_batch].to(device)
+            optimizer_vae.zero_grad()
             # forward pass
             x_reconst, mu, log_var = model_vae(input_batch)
 

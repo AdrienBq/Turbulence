@@ -99,8 +99,10 @@ def test(models, device, input_test):
         # compute loss
         reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
         kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-        test_loss +=  reconst_loss + kl_div
-    return test_loss.item()
+        loss =  reconst_loss + kl_div
+        test_loss += loss.item()
+        print('reconst_loss : ', reconst_loss.item(), ', kl_div : ', kl_div.item(), ', loss : ', loss.item())
+    return test_loss
 
 def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
 
@@ -108,17 +110,17 @@ def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_lo
     optimizers = []
     schedulers = []
     for var  in variables:
-        latent_dim = trial.suggest_int("{}_latent_dim".format(var), 2, 10)
+        latent_dim = trial.suggest_int("{}_latent_dim".format(var), 2, 5)
         # define model
         n_batches = input_train.shape[0]//batch_size
         model_vae = VAE(trial, var, input_features=len_in, latent_features=latent_dim)
         model_vae = model_vae.to(device)
 
         # Generate the optimizers.
-        decay_vae = trial.suggest_float("{}_decay_vae".format(var), 0.9, 0.99,)
+        decay_vae = 0.9 #trial.suggest_float("{}_decay_vae".format(var), 0.9, 0.99,)
         #optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
         optimizer_name = "Adam"
-        lr_vae = trial.suggest_float("{}_lr_vae".format(var), 1e-5, 1e-2, log=True)
+        lr_vae = 1e-4 #trial.suggest_float("{}_lr_vae".format(var), 1e-5, 1e-3, log=True)
         optimizer_vae = getattr(optim, optimizer_name)(model_vae.parameters(), lr=lr_vae)
 
         optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
@@ -135,6 +137,7 @@ def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_lo
             for j in range(len(variables)):
                 models[j].train()
                 input_batch = input_train[i_batch][:,j,:].to(device)
+                optimizers[j].zero_grad()
                 # forward pass
                 x_reconst, mu, log_var = models[j](input_batch)
 
@@ -213,7 +216,7 @@ def objective(trial):
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, trial, variables[5:6], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
+    obj = train(device, trial, variables[:6], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     return obj
 
 if __name__ == '__main__':
