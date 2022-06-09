@@ -89,17 +89,15 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-def test(models, device, input_test):
-    test_loss = 0
-    for j in range(len(models)):
-        models[j].eval()
-        # prediction
-        input_batch = input_test[:,j,:].to(device)
-        x_reconst, mu, log_var = models[j](input_batch)
-        # compute loss
-        reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
-        kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-        test_loss +=  reconst_loss + kl_div
+def test(model, device, input_test):
+    model.eval()
+    # prediction
+    input_batch = input_test[:,j,:].to(device)
+    x_reconst, mu, log_var = model(input_batch)
+    # compute loss
+    reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
+    kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+    test_loss =  reconst_loss + kl_div
     return test_loss.item()
 
 def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
