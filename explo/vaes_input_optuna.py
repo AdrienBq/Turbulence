@@ -209,7 +209,7 @@ def objective(trial):
         ins[j] = input
 
     batch_size = 32             
-    nb_epochs = 25      
+    nb_epochs = 5      
     train_losses=[]
     test_losses=[]
 
