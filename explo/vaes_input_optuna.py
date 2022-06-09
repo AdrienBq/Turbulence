@@ -92,11 +92,10 @@ class VAE(nn.Module):
 def test(models, device, input_test):
     test_loss = 0
     for j in range(len(models)):
-        model = models[j]
-        model.eval()
+        models[j].eval()
         # prediction
         input_batch = input_test[:,j,:].to(device)
-        x_reconst, mu, log_var = model(input_batch)
+        x_reconst, mu, log_var = models[j](input_batch)
         # compute loss
         reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
         kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
@@ -131,18 +130,14 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
         schedulers.append(scheduler_vae)
 
     for epoch in trange(nb_epochs, leave=False):
+        tot_losses=0
         for j in range(n_in_features):
-            tot_losses=0
             indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
-            model = models[j]
-            model.train()
-            optimizer = optimizers[j]
+            models[j].train()
             for i_batch in indexes_arr:
-                model = models[j]
                 input_batch = input_train[i_batch][:,j,:].to(device)
-
                 # forward pass
-                x_reconst, mu, log_var = model(input_batch)
+                x_reconst, mu, log_var = models[j](input_batch)
 
                 # compute loss
                 reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
@@ -152,7 +147,7 @@ def train(device, trial, n_in_features, batch_size, nb_epochs, train_losses, tes
 
                 # backward pass
                 loss.backward()
-                optimizer.step()
+                optimizers[j].step()
 
         train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
         #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
