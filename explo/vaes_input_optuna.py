@@ -105,8 +105,8 @@ def test(models, device, input_test, last_epoch):
             kl_factor = 10*reconst_loss.item()/kl_div.item()
         loss =  reconst_loss + kl_factor*kl_div
         test_loss += loss.item()
-        #if last_epoch:
-        print('reconst_loss : ', reconst_loss.item(), ', kl_div : ', kl_div.item(), ', loss : ', loss.item())
+        if last_epoch:
+            print('reconst_loss : ', reconst_loss.item(), ', kl_div : ', kl_div.item(), ', loss : ', loss.item())
     return test_loss
 
 def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
