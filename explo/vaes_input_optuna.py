@@ -89,7 +89,7 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-def test(models, device, input_test):
+def test(models, device, input_test, last_epoch):
     test_loss = 0
     for j in range(len(models)):
         models[j].eval()
@@ -101,7 +101,8 @@ def test(models, device, input_test):
         kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
         loss =  reconst_loss + kl_div
         test_loss += loss.item()
-        print('reconst_loss : ', reconst_loss.item(), ', kl_div : ', kl_div.item(), ', loss : ', loss.item())
+        if last_epoch:
+            print('reconst_loss : ', reconst_loss.item(), ', kl_div : ', kl_div.item(), ', loss : ', loss.item())
     return test_loss
 
 def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
@@ -109,6 +110,7 @@ def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_lo
     models = []
     optimizers = []
     schedulers = []
+    last_epoch = False
     for var  in variables:
         latent_dim = trial.suggest_int("{}_latent_dim".format(var), 2, 5)
         # define model
@@ -154,8 +156,9 @@ def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_lo
         train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
         #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                         # on a une loss en moyenne 2 fois plus petite
-
-        test_losses.append(test(models, device, input_test))
+        if epoch == nb_epochs-1:
+            last_epoch = True
+        test_losses.append(test(models, device, input_test,last_epoch))
 
         if epoch < 100:
             for j in range(len(variables)):
@@ -212,7 +215,7 @@ def objective(trial):
         ins[j] = input
 
     batch_size = 32
-    nb_epochs = 10
+    nb_epochs = 30
     train_losses=[]
     test_losses=[]
 
