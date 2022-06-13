@@ -231,7 +231,7 @@ def objective(trial):
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, trial, variables[5:6], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
+    obj = train(device, trial, variables[2:3], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     return obj
 
 if __name__ == '__main__':
