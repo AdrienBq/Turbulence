@@ -23,27 +23,30 @@ print('cuda available : ', torch.cuda.is_available())
 class VAE(nn.Module):
     '''
     ## Description
-    Double neural network combining a VAE with a simple feedforward network. 
+    VAE neural network for the inputs
     The point is to reduce the dimension of the input by using a VAE. 
-    The VAE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
+    The VAE maps the input to a latent space and later a feedforward network will predict fluxes from the encode input in the latent space.
     '''
     def __init__(self, input_features=2256,  hidden_size1=256, hidden_size2=128, z_dim=3, 
                 drop_enc1=0.3, drop_enc2=0.2, drop_mu=0.3, drop_log_var=0.25, 
-                drop_dec1 = 0.3, drop_dec2=0.3, drop_dec3=0.15014610591260366):
+                drop_dec1 = 0.3, drop_dec2=0.3, drop_dec3=0.3):
         '''
         ## Description
-        Double neural network combining a VAE with a simple feedforward network. 
+        VAE neural network for the inputs
         The point is to reduce the dimension of the input by using a VAE. 
-        The VAE maps the input to a gaussian latent space and the feedforward network maps the latent space to the output to predict fluxes.
-        The hyperparameters were optimized using the vae_dnn_net_optuna.py script.
-        The VAE uses fully connected layers with batchnorm, dropout and relu activation functions. It has one hidden layer for the encoder and one hidden layer for the decoder.
-        The feedforward network uses fully connected layers with batchnorm, dropout and relu activation functions. It has 5 hidden layer.
-
+        The VAE maps the input to a latent space and later a feedforward network will predict fluxes from the encode input in the latent space.
+        The hyperparameters were optimized using the vae_dnn_net_optuna.py script. They have to be changed for each input.
+        The VAE uses fully connected layers with batchnorm, dropout and relu activation functions. It has 2 hidden layer for the encoder and 2 hidden layer for the decoder.
+        
         ## Parameters
         - input_features: number of input features (input of the VAE)
         - hidden_size1: number of hidden units in the encoder first hidden layer and decoder second hidden layer, default=256
         - hidden_size2: number of hidden units in the encoder second hidden layer and decoder third hidden layer, default=128
         - z_dim: dimension of the latent space, default=3
+        - drop_enc1: dropout probability in the encoder first hidden layer, default=0.3
+        - drop_enc2: dropout probability in the encoder second hidden layer, default=0.2
+        - drop_mu: dropout probability in the mu layer, default=0.3
+        - drop_log_var: dropout probability in the log_var layer, default=0.25
         '''
         super(VAE, self).__init__()
         self.bulk_encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
