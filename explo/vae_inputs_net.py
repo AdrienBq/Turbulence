@@ -238,7 +238,7 @@ def main():
     lr_vae = 0.000285
     decay_vae = 0.9035
     batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 150               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 10              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
 
@@ -252,7 +252,7 @@ def main():
     try :
         plt.plot(train_losses_arr[0,1:], label='train')
         plt.plot(test_losses_arr[0,1:], label='test')
-        plt.set_title(f"VAE for {variables[var]}")
+        plt.title(f"VAE for {variables[var]}")
         plt.legend()
     except :
         pass
