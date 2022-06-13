@@ -248,21 +248,12 @@ def main():
 
     torch.save(model.state_dict(), f"explo/models/vae_net_opt_{variables[var]}.pt")
 
-    fig,axes = plt.subplots(len(batch_sizes),figsize=(5,4*len(batch_sizes)))
 
-    for k in range(len(batch_sizes)):
-        try : 
-            axes[k].plot(train_losses_arr[i,j,k,1:], label='train')
-            axes[k].plot(test_losses_arr[i,j,k,1:], label='test')
-            axes[k].set_title(f"VAE for {variables[var]}")
-            axes[k].legend()
-        except :
-            pass
     try :
-        axes.plot(train_losses_arr[0,1:], label='train')
-        axes.plot(test_losses_arr[0,1:], label='test')
-        axes.set_title(f"VAE for {variables[var]}")
-        axes.legend()
+        plt.plot(train_losses_arr[0,1:], label='train')
+        plt.plot(test_losses_arr[0,1:], label='test')
+        plt.set_title(f"VAE for {variables[var]}")
+        plt.legend()
     except :
         pass
 
