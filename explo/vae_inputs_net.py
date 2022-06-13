@@ -259,6 +259,7 @@ def main():
 
     plt.show()
     plt.savefig(f"explo/images/losses_vae_opt_{variables[var]}.png")
+    print('script completed')
 
 
 if __name__ == '__main__':
