@@ -238,22 +238,20 @@ def main():
     lr_vae = 0.000285
     decay_vae = 0.9035
     batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 10              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 150              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
 
     model = train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
-    print(train_losses_arr.shape)
-    print(test_losses_arr.shape)
 
     torch.save(model.state_dict(), f"explo/models/vae_net_opt_{variables[var]}.pt")
 
 
     try :
-        plt.plot(train_losses_arr[1:], label='train')
-        plt.plot(test_losses_arr[1:], label='test')
+        plt.plot(train_losses_arr[5:], label='train')
+        plt.plot(test_losses_arr[5:], label='test')
         plt.title(f"VAE for {variables[var]}")
         plt.legend()
     except :
