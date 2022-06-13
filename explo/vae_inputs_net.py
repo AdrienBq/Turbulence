@@ -27,10 +27,9 @@ class VAE(nn.Module):
     The point is to reduce the dimension of the input by using a VAE. 
     The VAE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
     '''
-    def __init__(self, input_features=2256, output_features=376, h_dec_dim=359, h_enc_dim=283, z_dim=3, 
-                drop_prob1=0.1080863832594497, drop_prob2=0.1398954543731306, drop_prob3=0.176256881097202, drop_prob4=0.19467179508996357, drop_prob5=0.19408057406110021, 
-                drop_prob6 = 0.11130569507243004, drop_prob7=0.12705405941207876, drop_prob8=0.15014610591260366, drop_prob9=0.44688800536582435,
-                hidden_size1=217, hidden_size2=262, hidden_size3=490, hidden_size4=358, hidden_size5=321):
+    def __init__(self, input_features=2256,  hidden_size1=256, hidden_size2=128, z_dim=3, 
+                drop_enc1=0.3, drop_enc2=0.2, drop_mu=0.3, drop_log_var=0.25, 
+                drop_dec1 = 0.3, drop_dec2=0.3, drop_dec3=0.15014610591260366):
         '''
         ## Description
         Double neural network combining a VAE with a simple feedforward network. 
@@ -42,59 +41,36 @@ class VAE(nn.Module):
 
         ## Parameters
         - input_features: number of input features (input of the VAE)
-        - output_features: number of output features (output of the feedforward network)
-        - h_dec_dim: number of hidden units in the decoder, default is 359
-        - h_enc_dim: number of hidden units in the encoder, default is 283
-        - z_dim: dimension of the latent space, default is 11
-        - drop_prob1: dropout probability for the first hidden layer of the predicting network, default is 0.1080863832594497
-        - drop_prob2: dropout probability for the second hidden layer of the predicting network, default is 0.1398954543731306
-        - drop_prob3: dropout probability for the third hidden layer of the predicting network, default is 0.176256881097202
-        - drop_prob4: dropout probability for the fourth hidden layer of the predicting network, default is 0.19467179508996357
-        - drop_prob5: dropout probability for the fifth hidden layer of the predicting network, default is 0.19408057406110021
-        - drop_prob6: dropout probability for the hidden layer of the encoder, default is 0.11130569507243004
-        - drop_prob7: dropout probability for the hidden layer of the decoder, default is 0.12705405941207876
-        - drop_prob8: dropout probability for the layer outputing mu, default is 0.15014610591260366
-        - drop_prob9: dropout probability for the layer outputing sigma, default is 0.44688800536582435
+        - hidden_size1: number of hidden units in the encoder first hidden layer and decoder second hidden layer, default=256
+        - hidden_size2: number of hidden units in the encoder second hidden layer and decoder third hidden layer, default=128
+        - z_dim: dimension of the latent space, default=3
         '''
         super(VAE, self).__init__()
-        self.fc1 = nn.Linear(input_features, h_enc_dim)
-        self.fc2 = nn.Linear(h_enc_dim, z_dim)
-        self.fc3 = nn.Linear(h_enc_dim, z_dim)
-        self.fc4 = nn.Linear(z_dim, h_dec_dim)
-        self.fc5 = nn.Linear(h_dec_dim, input_features)
-        self.bn1 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn2 = nn.BatchNorm1d(h_enc_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn3 = nn.BatchNorm1d(h_enc_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn4 = nn.BatchNorm1d(z_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn5 = nn.BatchNorm1d(h_dec_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.d1 = nn.Dropout(drop_prob6)
-        self.d2 = nn.Dropout(drop_prob7)
-        self.dmu = nn.Dropout(drop_prob8)
-        self.dlog_var = nn.Dropout(drop_prob9)
-
-        self.regression = nn.Sequential(nn.BatchNorm1d(z_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                        nn.Linear(z_dim, hidden_size1),
+        self.bulk_encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_enc1),
+                                        nn.Linear(input_features, hidden_size1),
                                         nn.ReLU(),
                                         nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                        nn.Dropout(drop_prob1),
+                                        nn.Dropout(drop_enc2),
                                         nn.Linear(hidden_size1, hidden_size2),
+                                        nn.ReLU())
+        self.mu_layer = nn.Sequential(nn.BatchNorm1d(hidden_size2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_mu),
+                                        nn.Linear(hidden_size2, z_dim))
+        self.log_var_layer = nn.Sequential(nn.BatchNorm1d(hidden_size2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                            nn.Dropout(drop_log_var),
+                                            nn.Linear(hidden_size2, z_dim))
+        self.decoder = nn.Sequential(nn.BatchNorm1d(z_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_dec1),
+                                        nn.Linear(z_dim, hidden_size2),
                                         nn.ReLU(),
                                         nn.BatchNorm1d(hidden_size2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                        nn.Dropout(drop_prob2),
-                                        nn.Linear(hidden_size2, hidden_size3),
+                                        nn.Dropout(drop_dec2),
+                                        nn.Linear(hidden_size2, hidden_size1),
                                         nn.ReLU(),
-                                        nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                        nn.Dropout(drop_prob3),
-                                        nn.Linear(hidden_size3, hidden_size4),
-                                        nn.ReLU(),
-                                        nn.BatchNorm1d(hidden_size4, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                        nn.Dropout(drop_prob4),
-                                        nn.Linear(hidden_size4, hidden_size5),
-                                        nn.ReLU(),
-                                        nn.BatchNorm1d(hidden_size5, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-                                        nn.Dropout(drop_prob5),
-                                        nn.Linear(hidden_size5, output_features)
-                                        )
+                                        nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_dec3),
+                                        nn.Linear(hidden_size1, input_features))
 
         
     def encode(self, x):
