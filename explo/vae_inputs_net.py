@@ -29,8 +29,8 @@ class VAE(nn.Module):
     The VAE maps the input to a latent space and later a feedforward network will predict fluxes from the encode input in the latent space.
     '''
     def __init__(self, input_features=376,  hidden_size1=256, hidden_size2=128, z_dim=3, 
-                drop_enc1=0.3, drop_enc2=0.2, drop_mu=0.3, drop_log_var=0.25, 
-                drop_dec1 = 0.3, drop_dec2=0.3, drop_dec3=0.3):
+                drop_enc1=0.405, drop_enc2=0.226, drop_mu=0.458, drop_log_var=0.441, 
+                drop_dec1 = 0.398, drop_dec2=0.303, drop_dec3=0.377):
         '''
         ## Description
         VAE neural network for the inputs
