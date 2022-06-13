@@ -245,6 +245,8 @@ def main():
     model = train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
+    print(train_losses_arr.shape)
+    print(test_losses_arr.shape)
 
     torch.save(model.state_dict(), f"explo/models/vae_net_opt_{variables[var]}.pt")
 
@@ -259,7 +261,6 @@ def main():
 
     plt.show()
     plt.savefig(f"explo/images/losses_vae_opt_{variables[var]}.png")
-    print('script completed')
 
 
 if __name__ == '__main__':
