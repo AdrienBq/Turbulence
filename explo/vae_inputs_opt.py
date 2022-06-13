@@ -233,7 +233,7 @@ if __name__ == '__main__':
     pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
-    study.optimize(objective, n_trials=50, timeout=10800)
+    study.optimize(objective, n_trials=30, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
