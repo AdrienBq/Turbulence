@@ -25,8 +25,8 @@ print('cuda available : ', torch.cuda.is_available())
 
 def define_net_layers(trial, var, net, input_features, output_features):
     # We optimize the number of linear layers, hidden units and dropout ratio in each layer.
-    n_lins = 2
-    hidden_size = [256,128]
+    n_lins = 3
+    hidden_size = [256,128,64]
     layers = []
     mu_layer = []
     logvar_layer = []
@@ -220,11 +220,11 @@ def objective(trial):
         ins[j] = input
 
     batch_size = 32
-    nb_epochs = 25
+    nb_epochs = 30
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, trial, variables[5:6], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
+    obj = train(device, trial, variables[:1], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     return obj
 
 if __name__ == '__main__':
