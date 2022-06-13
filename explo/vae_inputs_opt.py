@@ -23,9 +23,10 @@ print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
 
 
-def define_net_layers(trial, net, input_features, output_features):
+def define_net_layers(trial, var, net, input_features, output_features):
     # We optimize the number of linear layers, hidden units and dropout ratio in each layer.
-    n_lins = trial.suggest_int("n_layers", 3, 5)
+    n_lins = 2
+    hidden_size = [256,128]
     layers = []
     mu_layer = []
     logvar_layer = []
@@ -33,9 +34,9 @@ def define_net_layers(trial, net, input_features, output_features):
     in_features = input_features
 
     for i in range(n_lins):
-        out_features = trial.suggest_int("n_{}_units_l{}".format(net,i), 64, 512)
+        out_features = hidden_size[i]     #trial.suggest_int("n_{}_{}_units_l{}".format(var,net,i), 64, 512)
         layers.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-        p = trial.suggest_float("{}_dropout_l{}".format(net,i), 0.1, 0.5)
+        p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,i), 0.1, 0.5)
         layers.append(nn.Dropout(p))
         layers.append(nn.Linear(in_features, out_features))
         layers.append(nn.ReLU())
@@ -54,7 +55,7 @@ def define_net_layers(trial, net, input_features, output_features):
     
     else :
         layers.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-        p = trial.suggest_float("{}_dropout_l{}".format(net,i), 0.1, 0.5)
+        p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,i), 0.1, 0.5)
         layers.append(nn.Dropout(p))
         layers.append(nn.Linear(in_features, output_features))
         
@@ -62,10 +63,10 @@ def define_net_layers(trial, net, input_features, output_features):
 
 
 class VAE(nn.Module):
-    def __init__(self, trial, input_features, latent_features):
+    def __init__(self, trial, var, input_features, latent_features):
         super(VAE, self).__init__()
-        self.bulk_encoder, self.mu_layer, self.sig_layer = define_net_layers(trial, "enc", input_features, latent_features)
-        self.decoder = define_net_layers(trial, "dec", latent_features, input_features)[0]
+        self.bulk_encoder, self.mu_layer, self.sig_layer = define_net_layers(trial, var, "enc", input_features, latent_features)
+        self.decoder = define_net_layers(trial, var, "dec", latent_features, input_features)[0]
 
         self.input_shape = input_features
         self.latent_shape = latent_features
@@ -89,63 +90,84 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-def test(model, device, input_test):
-    model.eval()
-    # prediction
-    input_batch = input_test.to(device)
-    x_reconst, mu, log_var = model(input_batch)
-    # compute loss
-    reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
-    kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-    test_loss =  reconst_loss + kl_div
-    return test_loss.item()
+def test(models, device, input_test, last_epoch):
+    test_loss = 0
+    for j in range(len(models)):
+        models[j].eval()
+        # prediction
+        input_batch = input_test[:,j,:].to(device)
+        x_reconst, mu, log_var = models[j](input_batch)
+        # compute loss
+        reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
+        kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+        loss =  reconst_loss + kl_div
+        test_loss += loss.item()
+        if last_epoch:
+            print('reconst_loss : ', reconst_loss.item(), ', kl_div : ', kl_div.item(), ', loss : ', loss.item())
+    return test_loss
 
-def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
+def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
 
-    latent_dim = 2 #trial.suggest_int("latent_dim", 2, 5)
-    # define model
-    n_batches = input_train.shape[0]//batch_size
-    model_vae = VAE(trial, input_features=len_in, latent_features=latent_dim)
-    model_vae = model_vae.to(device)
+    models = []
+    optimizers = []
+    schedulers = []
+    last_epoch = False
+    for var  in variables:
+        latent_dim = 3      #trial.suggest_int("{}_latent_dim".format(var), 2, 5)
+        # define model
+        n_batches = input_train.shape[0]//batch_size
+        model_vae = VAE(trial, var, input_features=len_in, latent_features=latent_dim)
+        model_vae = model_vae.to(device)
 
-    # Generate the optimizers.
-    decay_vae = 0.9 #trial.suggest_float("decay_vae", 0.9, 0.99,)
-    #optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
-    optimizer_name = "Adam"
-    lr_vae = 1e-4 #trial.suggest_float("lr_vae", 1e-5, 1e-3, log=True)
-    optimizer_vae = getattr(optim, optimizer_name)(model_vae.parameters(), lr=lr_vae)
+        # Generate the optimizers.
+        decay_vae = trial.suggest_float("{}_decay_vae".format(var), 0.9, 0.99,)
+        #optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
+        optimizer_name = "Adam"
+        lr_vae = trial.suggest_float("{}_lr_vae".format(var), 1e-5, 1e-3, log=True)
+        optimizer_vae = getattr(optim, optimizer_name)(model_vae.parameters(), lr=lr_vae)
 
-    optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
-    scheduler_vae = torch.optim.lr_scheduler.ExponentialLR(optimizer_vae, decay_vae, last_epoch= -1)
+        optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
+        scheduler_vae = torch.optim.lr_scheduler.ExponentialLR(optimizer_vae, decay_vae, last_epoch= -1)
+
+        models.append(model_vae)
+        optimizers.append(optimizer_vae)
+        schedulers.append(scheduler_vae)
 
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
         indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
         for i_batch in indexes_arr:
-            model_vae.train()
-            input_batch = input_train[i_batch].to(device)
-            optimizer_vae.zero_grad()
-            # forward pass
-            x_reconst, mu, log_var = model_vae(input_batch)
+            for j in range(len(variables)):
+                models[j].train()
+                input_batch = input_train[i_batch][:,j,:].to(device)
+                optimizers[j].zero_grad()
+                # forward pass
+                x_reconst, mu, log_var = models[j](input_batch)
 
-            # compute loss
-            reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
-            kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-            loss =  reconst_loss + kl_div
-            tot_losses += loss.item()
+                # compute loss
+                reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
+                kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+                if kl_div.item()<10*reconst_loss.item():
+                    kl_factor = 1
+                else:
+                    kl_factor = 10*reconst_loss.item()/kl_div.item()
+                loss =  reconst_loss + kl_factor*kl_div
+                tot_losses += loss.item()
 
-            # backward pass
-            loss.backward()
-            optimizer_vae.step()
+                # backward pass
+                loss.backward()
+                optimizers[j].step()
 
         train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
         #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                         # on a une loss en moyenne 2 fois plus petite
-
-        test_losses.append(test(model_vae, device, input_test))
+        if epoch == nb_epochs-1:
+            last_epoch = True
+        test_losses.append(test(models, device, input_test,last_epoch))
 
         if epoch < 100:
-            scheduler_vae.step()
+            for j in range(len(variables)):
+                schedulers[j].step()
 
         trial.report(test_losses[-1], epoch)
 
@@ -161,11 +183,10 @@ def objective(trial):
     Directory = f"data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
-    var = 0     # 0 = u, 1 = v, 2 = w, 3 = theta, 4 = s, 5 = tke, 6 = wtheta
     nz=376
 
     full_len_in = nz*(len(variables)-1)
-    n_in_features = len(variables)-1
+    n_in_features = (len(variables)-1)
     len_in = nz
 
     model_number = 11
@@ -192,17 +213,18 @@ def objective(trial):
     ins = [input_train.reshape(-1,len(variables)-1,nz), input_test.reshape(-1,len(variables)-1,nz)]
 
     for j in range(len(ins)):
-        input = ins[j][:,var,:]
-        input -= torch.mean(input)
-        input /= torch.std(input)
+        input = ins[j]
+        for i in range(len(variables)-1):
+            input[:,i] -= torch.mean(input[:,i])
+            input[:,i] /= torch.std(input[:,i])
         ins[j] = input
 
     batch_size = 32
-    nb_epochs = 50
+    nb_epochs = 20
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
+    obj = train(device, trial, variables[:6], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     return obj
 
 if __name__ == '__main__':
@@ -211,7 +233,7 @@ if __name__ == '__main__':
     pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
-    study.optimize(objective, n_trials=30, timeout=10800)
+    study.optimize(objective, n_trials=50, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])

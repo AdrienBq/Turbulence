@@ -14,6 +14,7 @@
 modules/not_used.py
 explo/local_simple_dnn.ipynb
 /explo/images/optim_cnn.pdf
+/explo/images/vaes_params
 
 # User-specific files
 *.rsuser
