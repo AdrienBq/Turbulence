@@ -27,7 +27,7 @@ class VAE(nn.Module):
     The point is to reduce the dimension of the input by using a VAE. 
     The VAE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
     '''
-    def __init__(self, input_features=2256, output_features=376, h_dec_dim=359, h_enc_dim=283, z_dim=11, 
+    def __init__(self, input_features=2256, output_features=376, h_dec_dim=359, h_enc_dim=283, z_dim=3, 
                 drop_prob1=0.1080863832594497, drop_prob2=0.1398954543731306, drop_prob3=0.176256881097202, drop_prob4=0.19467179508996357, drop_prob5=0.19408057406110021, 
                 drop_prob6 = 0.11130569507243004, drop_prob7=0.12705405941207876, drop_prob8=0.15014610591260366, drop_prob9=0.44688800536582435,
                 hidden_size1=217, hidden_size2=262, hidden_size3=490, hidden_size4=358, hidden_size5=321):
@@ -36,7 +36,7 @@ class VAE(nn.Module):
         Double neural network combining a VAE with a simple feedforward network. 
         The point is to reduce the dimension of the input by using a VAE. 
         The VAE maps the input to a gaussian latent space and the feedforward network maps the latent space to the output to predict fluxes.
-        The hyperparameters were optimized using the vae_net_optuna.py script.
+        The hyperparameters were optimized using the vae_dnn_net_optuna.py script.
         The VAE uses fully connected layers with batchnorm, dropout and relu activation functions. It has one hidden layer for the encoder and one hidden layer for the decoder.
         The feedforward network uses fully connected layers with batchnorm, dropout and relu activation functions. It has 5 hidden layer.
 
