@@ -25,7 +25,7 @@ print('cuda available : ', torch.cuda.is_available())
 
 def define_net_layers(trial, var, net, input_features, output_features):
     # We optimize the number of linear layers, hidden units and dropout ratio in each layer.
-    n_lins = 3
+    n_lins = 2
     enc_hidden_sizes = [256,128]
     dec_hidden_sizes = [128,256]
     layers = []
