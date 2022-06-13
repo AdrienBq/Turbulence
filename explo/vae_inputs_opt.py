@@ -194,7 +194,6 @@ def objective(trial):
     nz=376
 
     full_len_in = nz*(len(variables)-1)
-    n_in_features = (len(variables)-1)
     len_in = nz
 
     model_number = 11

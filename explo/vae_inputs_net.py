@@ -14,6 +14,7 @@ import modules.utils as utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 
 print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
@@ -27,7 +28,7 @@ class VAE(nn.Module):
     The point is to reduce the dimension of the input by using a VAE. 
     The VAE maps the input to a latent space and later a feedforward network will predict fluxes from the encode input in the latent space.
     '''
-    def __init__(self, input_features=2256,  hidden_size1=256, hidden_size2=128, z_dim=3, 
+    def __init__(self, input_features=376,  hidden_size1=256, hidden_size2=128, z_dim=3, 
                 drop_enc1=0.3, drop_enc2=0.2, drop_mu=0.3, drop_log_var=0.25, 
                 drop_dec1 = 0.3, drop_dec2=0.3, drop_dec3=0.3):
         '''
@@ -77,8 +78,8 @@ class VAE(nn.Module):
 
         
     def encode(self, x):
-        h = F.relu(self.fc1(self.d1(self.bn1(x))))
-        return self.fc2(self.dmu(self.bn2(h))), self.fc3(self.dlog_var(self.bn3(h)))
+        h = self.bulk_encoder(x)
+        return self.mu_layer(h), self.log_var_layer(h)
     
     def reparameterize(self, mu, log_var):
         std = torch.exp(log_var/2)
@@ -86,21 +87,15 @@ class VAE(nn.Module):
         return mu + eps * std
 
     def decode(self, z):
-        h = F.relu(self.fc4(self.d2(self.bn4(z))))
-        return self.fc5(self.bn5(h))
+        return self.decoder(z)
     
-    def forward_vae(self, x):
+    def forward(self, x):
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
         x_reconst = self.decode(z)
         return x_reconst, mu, log_var
-    
-    def forward(self,x):
-        mu, log_var = self.encode(x)
-        z = self.reparameterize(mu, log_var)
-        return self.regression(z)
 
-def test(model_vae, device, input_test, output_test):
+def test(model_vae, var, device, input_test):
     '''
     ## Description
     Test the model on the test set.
@@ -113,12 +108,16 @@ def test(model_vae, device, input_test, output_test):
     '''
     model_vae.eval()
     # prediction
-    output_pred = model_vae(input_test.to(device))
+    input_batch = input_test[:,var,:].to(device)
+    x_reconst, mu, log_var = model_vae(input_batch)
     # compute loss
-    test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
-    return test_loss.item()
+    reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
+    kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+    loss =  reconst_loss + kl_div
 
-def train(device, lr_vae, decay_vae, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, latent_dim, len_out):
+    return loss.item()
+
+def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
     '''
     ## Description
     Train the model on the training set. Loop to train multiple models with different batch sizes.
@@ -140,52 +139,55 @@ def train(device, lr_vae, decay_vae, batch_sizes, nb_epochs, models, train_losse
     - latent_dim (int) : the dimension of the latent space
     - len_out (int) : the length of the output data
     '''
-    for batch_size in batch_sizes :
-        n_batches = input_train.shape[0]//batch_size
-        model_vae = VAE(input_features=len_in, z_dim=latent_dim, output_features=len_out)
-        model_vae = model_vae.to(device)
+    last_epoch = False
 
-        optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
-        scheduler_vae = torch.optim.lr_scheduler.ExponentialLR(optimizer_vae, decay_vae, last_epoch= -1)
-        models.append(model_vae)
+    # define model
+    n_batches = input_train.shape[0]//batch_size
+    model_vae = VAE(input_features=len_in, z_dim=3, drop_enc1=0.2, drop_enc2=0.2, drop_mu=0.2, drop_log_var=0.2, drop_dec1=0.2, drop_dec2=0.2, drop_dec3=0.2).to(device)
+    model_vae = model_vae.to(device)
 
-        train_losses_bs = []
-        test_losses_bs = []
-        for epoch in trange(nb_epochs[0], leave=False):
-            model_vae.train()
-            tot_losses=0
-            indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
-            for i_batch in indexes_arr:
-                input_batch = input_train[i_batch].to(device)
-                output_batch = output_train[i_batch].to(device)
-                optimizer_vae.zero_grad()
+    # Generate the optimizers.
+    optimizer_name = "Adam"
+    optimizer_vae = getattr(optim, optimizer_name)(model_vae.parameters(), lr=lr_vae)
 
-                # forward pass
-                x_reconst, mu, log_var = model_vae.forward_vae(input_batch)
-                output_pred = model_vae(input_batch)
+    optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
+    scheduler_vae = torch.optim.lr_scheduler.ExponentialLR(optimizer_vae, decay_vae, last_epoch= -1)
 
-                # compute loss
-                reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='sum')
-                kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-                flux_pred_loss = F.mse_loss(output_pred, output_batch, reduction='mean')
-                loss =  flux_pred_loss + reconst_loss + kl_div
-                tot_losses += flux_pred_loss.item()
+    for epoch in trange(nb_epochs, leave=False):
+        model_vae.train()
+        tot_losses=0
+        indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
+        for i_batch in indexes_arr:
+            input_batch = input_train[i_batch][:,var,:].to(device)
+            optimizer_vae.zero_grad()
+            # forward pass
+            x_reconst, mu, log_var = model_vae(input_batch)
 
-                # backward pass
-                loss.backward()
-                optimizer_vae.step()
-            train_losses_bs.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
-            #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
-                                                            # on a une loss en moyenne 2 fois plus petite
+            # compute loss
+            reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
+            kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+            if kl_div.item()<10*reconst_loss.item():
+                kl_factor = 1
+            else:
+                kl_factor = 10*reconst_loss.item()/kl_div.item()
+            loss =  reconst_loss + kl_factor*kl_div
+            tot_losses += loss.item()
 
-            test_losses_bs.append(test(model_vae, device, input_test, output_test))
+            # backward pass
+            loss.backward()
+            optimizer_vae.step()
 
-            if epoch < 50:
-                scheduler_vae.step()
+        train_losses.append(tot_losses/n_batches)       # loss moyenne sur tous les batchs 
+        #print(tot_losses)                              # comme on a des batch 2 fois plus petit (16 au lieu de 32)
+                                                        # on a une loss en moyenne 2 fois plus petite
+        test_losses.append(test(model_vae, var, device, input_test))
 
-        print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(lr_vae, decay_vae, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
-    train_losses.append(train_losses_bs)
-    test_losses.append(test_losses_bs)
+        if epoch < 50:
+            scheduler_vae.step()
+
+    print('Model {},{},{},Epoch [{}/{}], Train Loss: {:.6f}'.format(lr_vae, decay_vae, batch_size, epoch+1, nb_epochs, tot_losses/n_batches))
+    return model_vae
+
 
 
 def main():
@@ -197,19 +199,18 @@ def main():
     Directory = f"data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
+    var = 0     # 0 = u, 1 = v, 2 = w, 3 = theta, 4 = s, 5 = tke, 6 = wtheta
     nz=376
 
-    len_samples = nz*len(variables)
-    len_in = nz*(len(variables)-1)
-    len_out = nz
-    n_in_features = len(variables)-1
+    full_len_in = nz*(len(variables)-1)
+    len_in = nz
 
     model_number = 11
     tmin=1
     tmax=62+1
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print('using cuda : ', torch.cuda.is_available())
+    # print('using cuda : ', torch.cuda.is_available())
 
     path_times_train = f'data/test_train_times/times_train_{model_number}.csv'
     path_times_test = f'data/test_train_times/times_test_{model_number}.csv'
@@ -224,39 +225,28 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    input_train, output_train, input_test, output_test = utils.make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory)
-    ins = [input_train, input_test]
-    outs = [output_train, output_test]
+    input_train, _, input_test, _ = utils.make_train_test_ds(coarse_factors, full_len_in, train_times, test_times, Directory)
+    ins = [input_train.reshape(-1,len(variables)-1,nz), input_test.reshape(-1,len(variables)-1,nz)]
 
     for j in range(len(ins)):
         input = ins[j]
-        input = input.reshape(-1,len(variables)-1,nz)
         for i in range(len(variables)-1):
             input[:,i] -= torch.mean(input[:,i])
             input[:,i] /= torch.std(input[:,i])
-        input = input.reshape(-1,len_in)
         ins[j] = input
 
-    for i in range(len(outs)):
-        output = outs[i]
-        output -= torch.mean(output)
-        output /= torch.std(output)
-        outs[i] = output
-
-    latent_dim = 11
-    lr_vae, lr_ff = 0.00155415456328059 , 0.0001095908946314874
-    decay_vae, decay_ff = 0.9106719211794353 , 0.9636446685306491
-    batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [150]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    lr_vae = 0.000285
+    decay_vae = 0.9035
+    batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    nb_epochs = 150               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
-    models=[]
 
-    train(device, lr_vae, decay_vae, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], len_in, latent_dim, len_out)
+    model = train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
-    torch.save(models[0].state_dict(), f"explo/models/vae_net_opt_{1}.pt")
+    torch.save(model.state_dict(), f"explo/models/vae_net_opt_{variables[var]}.pt")
 
     fig,axes = plt.subplots(len(batch_sizes),figsize=(5,4*len(batch_sizes)))
 
@@ -264,20 +254,20 @@ def main():
         try : 
             axes[k].plot(train_losses_arr[i,j,k,1:], label='train')
             axes[k].plot(test_losses_arr[i,j,k,1:], label='test')
-            axes[k].set_title(f"bs = {batch_sizes[k]}")
+            axes[k].set_title(f"VAE for {variables[var]}")
             axes[k].legend()
         except :
             pass
     try :
         axes.plot(train_losses_arr[0,1:], label='train')
         axes.plot(test_losses_arr[0,1:], label='test')
-        axes.set_title(f"d = {decay_vae},{decay_ff}, lr = {lr_vae},{lr_ff}, bs = {batch_sizes[0]}")
+        axes.set_title(f"VAE for {variables[var]}")
         axes.legend()
     except :
         pass
 
     plt.show()
-    plt.savefig(f"explo/images/losses_vae_opt.png")
+    plt.savefig(f"explo/images/losses_vae_opt_{variables[var]}.png")
 
 
 if __name__ == '__main__':
