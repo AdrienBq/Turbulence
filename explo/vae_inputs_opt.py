@@ -26,8 +26,8 @@ print('cuda available : ', torch.cuda.is_available())
 def define_net_layers(trial, var, net, input_features, output_features):
     # We optimize the number of linear layers, hidden units and dropout ratio in each layer.
     n_lins = 3
-    enc_hidden_sizes = [256,128,64]
-    dec_hidden_sizes = [64,128,256]
+    enc_hidden_sizes = [256,128]
+    dec_hidden_sizes = [128,256]
     layers = []
     mu_layer = []
     logvar_layer = []
@@ -63,7 +63,7 @@ def define_net_layers(trial, var, net, input_features, output_features):
             layers.append(nn.ReLU())
             in_features = out_features
         layers.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-        p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,i), 0.1, 0.5)
+        p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,n_lins), 0.1, 0.5)
         layers.append(nn.Dropout(p))
         layers.append(nn.Linear(in_features, output_features))
         
@@ -228,7 +228,7 @@ def objective(trial):
         ins[j] = input
 
     batch_size = 32
-    nb_epochs = 30
+    nb_epochs = 20
     train_losses=[]
     test_losses=[]
 
