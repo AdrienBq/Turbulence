@@ -252,8 +252,8 @@ def main():
 
 
     try :
-        plt.plot(train_losses_arr[0,1:], label='train')
-        plt.plot(test_losses_arr[0,1:], label='test')
+        plt.plot(train_losses_arr[1:], label='train')
+        plt.plot(test_losses_arr[1:], label='test')
         plt.title(f"VAE for {variables[var]}")
         plt.legend()
     except :
