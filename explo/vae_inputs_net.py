@@ -240,7 +240,7 @@ def main():
     lr_vae = 0.000386
     decay_vae = 0.918
     batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 50              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 100              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]            # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
 
