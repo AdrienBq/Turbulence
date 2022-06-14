@@ -159,6 +159,9 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
         model_vae.train()
         tot_losses=0
         indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
+        kl_factor = 0
+        if epoch > 20 and epoch <= 40:
+            kl_factor += 1/20
         for i_batch in indexes_arr:
             input_batch = input_train[i_batch][:,var,:].to(device)
             optimizer_vae.zero_grad()
@@ -168,10 +171,6 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
             # compute loss
             reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
             kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-            if kl_div.item()<reconst_loss.item():
-                kl_factor = kl_div.item()/reconst_loss.item()
-            else:
-                kl_factor = reconst_loss.item()/kl_div.item()
             loss =  reconst_loss + kl_div
             corrected_loss =  reconst_loss + kl_div*kl_factor
             tot_losses += loss.item()
@@ -241,7 +240,7 @@ def main():
     lr_vae = 0.000386
     decay_vae = 0.918
     batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 20              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 50              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]            # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
 
