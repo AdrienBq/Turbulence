@@ -170,7 +170,7 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
             # compute loss
             reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
             kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-            if kl_div.item()>10*reconst_loss.item():
+            if kl_div.item()<10*reconst_loss.item():
                 kl_factor = 1
             else:
                 kl_factor = 10*reconst_loss.item()/kl_div.item()
