@@ -239,10 +239,10 @@ def main():
             input[:,i] /= torch.std(input[:,i])
         ins[j] = input
 
-    lr_vae = 0.000185
-    decay_vae = 0.928
+    lr_vae = 0.000137
+    decay_vae = 0.927
     batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 50              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 150              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
 
