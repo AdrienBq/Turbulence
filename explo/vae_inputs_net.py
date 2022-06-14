@@ -117,7 +117,7 @@ def test(model_vae, var, device, input_test):
     reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
     kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
     loss =  reconst_loss + kl_div
-    return loss.item()
+    return [reconst_loss.item(), kl_div.item()]
 
 def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
     '''
@@ -141,7 +141,6 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
     - latent_dim (int) : the dimension of the latent space
     - len_out (int) : the length of the output data
     '''
-    last_epoch = False
 
     # define model
     n_batches = input_train.shape[0]//batch_size
@@ -189,7 +188,7 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
         if epoch < 50:
             scheduler_vae.step()
 
-    print('Model {},{},{},Epoch [{}/{}], Train Loss: {:.6f}, test_loss: {:.6f}'.format(lr_vae, decay_vae, batch_size, epoch+1, nb_epochs, train_losses[-1], test_losses[-1]))
+    print('Model {},{},{},Epoch [{}/{}], Train Loss: {:.6f}, reconst_test_loss: {:.6f}, kl_test: {:.6f}'.format(lr_vae, decay_vae, batch_size, epoch+1, nb_epochs, train_losses[-1], test_losses[-1][0], test_losses[-1][1]))
     return model_vae
 
 
