@@ -154,14 +154,14 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
 
     optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
     scheduler_vae = torch.optim.lr_scheduler.ExponentialLR(optimizer_vae, decay_vae, last_epoch= -1)
+    kl_factor = 0
 
     for epoch in trange(nb_epochs, leave=False):
         model_vae.train()
         tot_losses=0
         indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
-        kl_factor = 0
         if epoch > 20 and epoch <= 40:
-            kl_factor += 1/20
+            kl_factor += 1/20*reconst_loss/kl_div
         for i_batch in indexes_arr:
             input_batch = input_train[i_batch][:,var,:].to(device)
             optimizer_vae.zero_grad()
