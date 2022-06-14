@@ -189,7 +189,7 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
         if epoch < 50:
             scheduler_vae.step()
 
-    print('Model {},{},{},Epoch [{}/{}], Train Loss: {:.6f}'.format(lr_vae, decay_vae, batch_size, epoch+1, nb_epochs, tot_losses/n_batches))
+    print('Model {},{},{},Epoch [{}/{}], Train Loss: {:.6f}, test_loss: {:.6f}'.format(lr_vae, decay_vae, batch_size, epoch+1, nb_epochs, train_losses[-1], test_losses[-1]))
     return model_vae
 
 
