@@ -161,7 +161,7 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
         tot_losses=0
         indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
         if epoch > 20 and epoch <= 40:
-            kl_factor += 1/20*reconst_loss/kl_div
+            kl_factor += 1/2000
         for i_batch in indexes_arr:
             input_batch = input_train[i_batch][:,var,:].to(device)
             optimizer_vae.zero_grad()
