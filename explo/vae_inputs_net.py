@@ -29,8 +29,8 @@ class VAE(nn.Module):
     The VAE maps the input to a latent space and later a feedforward network will predict fluxes from the encode input in the latent space.
     '''
     def __init__(self, input_features=376,  hidden_size1=256, hidden_size2=128, z_dim=3, 
-                drop_enc1=0.405, drop_enc2=0.226, drop_mu=0.458, drop_log_var=0.441, 
-                drop_dec1 = 0.398, drop_dec2=0.303, drop_dec3=0.377):
+                drop_enc1=0.3, drop_enc2=0.2, drop_mu=0.3, drop_log_var=0.25, 
+                drop_dec1 = 0.3, drop_dec2=0.2, drop_dec3=0.2):
         '''
         ## Description
         VAE neural network for the inputs
@@ -48,6 +48,9 @@ class VAE(nn.Module):
         - drop_enc2: dropout probability in the encoder second hidden layer, default=0.2
         - drop_mu: dropout probability in the mu layer, default=0.3
         - drop_log_var: dropout probability in the log_var layer, default=0.25
+        - drop_dec1: dropout probability in the decoder first hidden layer, default=0.3
+        - drop_dec2: dropout probability in the decoder second hidden layer, default=0.2
+        - drop_dec3: dropout probability in the decoder third hidden layer, default=0.2
         '''
         super(VAE, self).__init__()
         self.bulk_encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
@@ -143,7 +146,8 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
 
     # define model
     n_batches = input_train.shape[0]//batch_size
-    model_vae = VAE(input_features=len_in, z_dim=3, drop_enc1=0.2, drop_enc2=0.2, drop_mu=0.2, drop_log_var=0.2, drop_dec1=0.2, drop_dec2=0.2, drop_dec3=0.2).to(device)
+    model_vae = VAE(input_features=len_in, z_dim=3, drop_enc1=0.207, drop_enc2=0.452, drop_mu=0.26, drop_log_var=0.33, 
+                    drop_dec1=0.50, drop_dec2=0.47, drop_dec3=0.13).to(device)
     model_vae = model_vae.to(device)
 
     # Generate the optimizers.
@@ -235,8 +239,8 @@ def main():
             input[:,i] /= torch.std(input[:,i])
         ins[j] = input
 
-    lr_vae = 0.000285
-    decay_vae = 0.9035
+    lr_vae = 0.000185
+    decay_vae = 0.928
     batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
     nb_epochs = 50              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
