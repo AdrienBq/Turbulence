@@ -116,8 +116,8 @@ def test(model_vae, var, device, input_test):
     # compute loss
     reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
     kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-    loss =  reconst_loss + kl_div
-
+    #loss =  reconst_loss + kl_div
+    loss = reconst_loss
     return loss.item()
 
 def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
@@ -174,7 +174,8 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
                 kl_factor = 1
             else:
                 kl_factor = 10*reconst_loss.item()/kl_div.item()
-            loss =  reconst_loss + kl_factor*kl_div
+            #loss =  reconst_loss + kl_factor*kl_div
+            loss =  reconst_loss
             tot_losses += loss.item()
 
             # backward pass
