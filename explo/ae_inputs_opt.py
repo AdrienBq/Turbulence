@@ -34,69 +34,41 @@ def define_net_layers(trial, var, net, input_features, output_features):
 
     in_features = input_features
 
-    if net == 'enc':
-        for i in range(n_lins):
-            out_features = enc_hidden_sizes[i]     #trial.suggest_int("n_{}_{}_units_l{}".format(var,net,i), 64, 512)
-            layers.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-            p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,i), 0.1, 0.5)
-            layers.append(nn.Dropout(p))
-            layers.append(nn.Linear(in_features, out_features))
-            layers.append(nn.ReLU())
-            in_features = out_features
-        mu_layer.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-        p_mu = trial.suggest_float("mu_dropout", 0.1, 0.5)
-        mu_layer.append(nn.Dropout(p_mu))
-        mu_layer.append(nn.Linear(in_features, output_features))
-
-        logvar_layer.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-        p_logvar = trial.suggest_float("sig_dropout", 0.1, 0.5)
-        logvar_layer.append(nn.Dropout(p_logvar))
-        logvar_layer.append(nn.Linear(in_features, output_features))
-    
-    else :
-        for i in range(n_lins):
-            out_features = dec_hidden_sizes[i]     #trial.suggest_int("n_{}_{}_units_l{}".format(var,net,i), 64, 512)
-            layers.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-            p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,i), 0.1, 0.5)
-            layers.append(nn.Dropout(p))
-            layers.append(nn.Linear(in_features, out_features))
-            layers.append(nn.ReLU())
-            in_features = out_features
+    for i in range(n_lins):
+        out_features = enc_hidden_sizes[i]     #trial.suggest_int("n_{}_{}_units_l{}".format(var,net,i), 64, 512)
         layers.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
-        p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,n_lins), 0.1, 0.5)
+        p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,i), 0.1, 0.5)
         layers.append(nn.Dropout(p))
-        layers.append(nn.Linear(in_features, output_features))
+        layers.append(nn.Linear(in_features, out_features))
+        layers.append(nn.ReLU())
+        in_features = out_features
+    layers.append(nn.BatchNorm1d(in_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+    p = trial.suggest_float("{}_{}_dropout_l{}".format(var,net,n_lins), 0.1, 0.5)
+    layers.append(nn.Dropout(p))
+    layers.append(nn.Linear(in_features, output_features))
         
-    return nn.Sequential(*layers), nn.Sequential(*mu_layer), nn.Sequential(*logvar_layer)
+    return nn.Sequential(*layers)
 
 
 class VAE(nn.Module):
     def __init__(self, trial, var, input_features, latent_features):
         super(VAE, self).__init__()
-        self.bulk_encoder, self.mu_layer, self.sig_layer = define_net_layers(trial, var, "enc", input_features, latent_features)
+        self.encoder= define_net_layers(trial, var, "enc", input_features, latent_features)
         self.decoder = define_net_layers(trial, var, "dec", latent_features, input_features)[0]
 
         self.input_shape = input_features
         self.latent_shape = latent_features
                                         
     def encode(self, x):
-        x = self.bulk_encoder(x)
-        mu = self.mu_layer(x)
-        logvar = self.sig_layer(x)
-        return mu, logvar
-    
-    def reparameterize(self, mu, log_var):
-        std = torch.exp(log_var/2)
-        eps = torch.randn_like(std)
-        return mu + eps * std
+        z = self.encoder(x)
+        return z
 
     def decode(self, z):
         return self.decoder(z)
 
     def forward(self, x):
-        mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
-        return self.decode(z), mu, logvar
+        z = self.encode(x)
+        return self.decode(z)
 
 def test(models, device, input_test, last_epoch):
     test_loss = 0
@@ -104,7 +76,7 @@ def test(models, device, input_test, last_epoch):
         models[j].eval()
         # prediction
         input_batch = input_test[:,j,:].to(device)
-        x_reconst, mu, log_var = models[j](input_batch)
+        x_reconst = models[j](input_batch)
         # compute loss
         reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
         test_loss += reconst_loss.item()
@@ -148,7 +120,7 @@ def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_lo
                 input_batch = input_train[i_batch][:,j,:].to(device)
                 optimizers[j].zero_grad()
                 # forward pass
-                x_reconst, mu, log_var = models[j](input_batch)
+                x_reconst = models[j](input_batch)
 
                 # compute loss
                 reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
