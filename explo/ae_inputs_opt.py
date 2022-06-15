@@ -54,7 +54,7 @@ class VAE(nn.Module):
     def __init__(self, trial, var, input_features, latent_features):
         super(VAE, self).__init__()
         self.encoder= define_net_layers(trial, var, "enc", input_features, latent_features)
-        self.decoder = define_net_layers(trial, var, "dec", latent_features, input_features)[0]
+        self.decoder = define_net_layers(trial, var, "dec", latent_features, input_features)
 
         self.input_shape = input_features
         self.latent_shape = latent_features
