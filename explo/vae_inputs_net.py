@@ -169,7 +169,7 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
             optimizer_vae.zero_grad()
             # forward pass
             mu, log_var = model_vae.encode(input_batch)
-            x_reconst = [model_vae.reparameterize(input_batch) for _ in range(10)]
+            x_reconst = [model_vae.reparameterize(mu,log_var) for _ in range(10)]
 
             # compute loss
             reconst_loss = 0
