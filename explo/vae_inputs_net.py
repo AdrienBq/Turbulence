@@ -168,13 +168,10 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
             input_batch = input_train[i_batch][:,var,:].to(device)
             optimizer_vae.zero_grad()
             # forward pass
-            mu, log_var = model_vae.encode(input_batch)
-            x_reconst = [model_vae.decode(model_vae.reparameterize(mu,log_var)) for _ in range(10)]
+            x_reconst, mu, log_var = model_vae(input_batch)
 
             # compute loss
-            reconst_loss = 0
-            for i in range(10):
-                reconst_loss += F.mse_loss(x_reconst[i], input_batch, reduction='mean')
+            reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
             kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
             loss =  reconst_loss + kl_div
             corrected_loss =  reconst_loss + kl_div*kl_factor
