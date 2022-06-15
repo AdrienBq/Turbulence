@@ -155,21 +155,26 @@ def train(device, var, lr_vae, decay_vae, batch_size, nb_epochs, train_losses, t
     optimizer_vae = torch.optim.Adam(model_vae.parameters(), lr=lr_vae)
     scheduler_vae = torch.optim.lr_scheduler.ExponentialLR(optimizer_vae, decay_vae, last_epoch= -1)
     kl_factor = 0
+    kl_start_epoch = 20
+    anneal_rate = 1 / (nb_epochs - kl_start_epoch)
 
     for epoch in trange(nb_epochs, leave=False):
         model_vae.train()
         tot_losses=0
         indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
-        if epoch > 20 and epoch <= 40:
-            kl_factor += 1/2000
+        if epoch > kl_start_epoch:
+            kl_factor += min(1, kl_factor + anneal_rate)
         for i_batch in indexes_arr:
             input_batch = input_train[i_batch][:,var,:].to(device)
             optimizer_vae.zero_grad()
             # forward pass
-            x_reconst, mu, log_var = model_vae(input_batch)
+            mu, log_var = model_vae.encode(input_batch)
+            x_reconst = [model_vae.reparameterize(input_batch) for _ in range(10)]
 
             # compute loss
-            reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
+            reconst_loss = 0
+            for i in range(10):
+                reconst_loss += F.mse_loss(x_reconst[i], input_batch, reduction='mean')
             kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
             loss =  reconst_loss + kl_div
             corrected_loss =  reconst_loss + kl_div*kl_factor
