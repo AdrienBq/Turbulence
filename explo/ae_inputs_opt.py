@@ -109,7 +109,7 @@ def test(models, device, input_test, last_epoch):
         reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
         test_loss += reconst_loss.item()
     if last_epoch:
-        print('test reconstruction loss : ', test_loss.item())
+        print('test reconstruction loss : ', test_loss)
     return test_loss
 
 def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_losses, input_train, input_test, len_in):
