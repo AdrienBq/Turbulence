@@ -133,7 +133,7 @@ def train(device, trial, variables, batch_size, nb_epochs, train_losses, test_lo
         train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
         #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                         # on a une loss en moyenne 2 fois plus petite
-        if True : #epoch == nb_epochs-1:
+        if epoch == nb_epochs-1:
             last_epoch = True
         test_losses.append(test(models, device, input_test,last_epoch))
 
@@ -195,7 +195,7 @@ def objective(trial):
     train_losses=[]
     test_losses=[]
 
-    obj = train(device, trial, variables[:1], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
+    obj = train(device, trial, variables[1:2], batch_size, nb_epochs, train_losses, test_losses, ins[0], ins[1], len_in)
     return obj
 
 if __name__ == '__main__':
