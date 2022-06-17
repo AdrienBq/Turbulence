@@ -174,7 +174,6 @@ def train(device, learning_rates, ae_models, nb_epochs, models, train_losses, te
     for i in range(len(learning_rates)):
         model = DNN(input_size=len_in,output_size=len_out)
         model = model.to(device)
-        print(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rates[i])
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95, last_epoch= -1)
         for epoch in trange(nb_epochs, leave=False):
@@ -227,6 +226,7 @@ def main():
     for var in variables[:-1]:
         model = AE(input_features=nz)
         model.load_state_dict(torch.load('explo/models/{}_ae_net.pt'.format(var), map_location=torch.device(device)))
+        model.to(device)
         model.eval()
         ae_models.append(model)
 
