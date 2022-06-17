@@ -172,6 +172,8 @@ def train(device, learning_rates, ae_models, nb_epochs, models, train_losses, te
     - len_out (int) : the length of the output sequence
     '''
     for i in range(len(learning_rates)):
+        train_losses_lr = []
+        test_losses_lr = []
         model = DNN(input_size=len_in,output_size=len_out)
         model = model.to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rates[i])
@@ -197,16 +199,18 @@ def train(device, learning_rates, ae_models, nb_epochs, models, train_losses, te
                 # backward pass
                 loss.backward()
                 optimizer.step()
-            train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
+            train_losses_lr.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
             #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                                 # on a une loss en moyenne 2 fois plus petite
 
-            test_losses.append(test(model, device, ae_models, input_test, output_test))
+            test_losses_lr.append(test(model, device, ae_models, input_test, output_test))
 
             if epoch < 200:
                 scheduler.step()
-
+        train_losses.append(train_losses_lr)
+        test_losses.append(test_losses_lr)
         models.append(model)
+        
         print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs, tot_losses/n_batches))
 
 def main():
