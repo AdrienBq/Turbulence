@@ -316,7 +316,7 @@ def main():
     
     input_train, input_test, output_train, output_test = ins[0], ins[1], outs[0], outs[1]
 
-    learning_rates = [1e-2,1e-3]
+    learning_rates = [1e-2,1e-3,5*1e-3]
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
     nb_epochs = 50   # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
