@@ -52,7 +52,7 @@ class AE(nn.Module):
         - drop_dec3: dropout probability in the decoder third hidden layer, default=0.2
         '''
         super(AE, self).__init__()
-        self.bulk_encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+        self.encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_enc1),
                                         nn.Linear(input_features, hidden_size1),
                                         nn.ReLU(),
@@ -133,7 +133,7 @@ def train(device, var, lr_ae, decay_ae, batch_size, nb_epochs, train_losses, tes
 
     # define model
     n_batches = input_train.shape[0]//batch_size
-    model_ae = AE(input_features=len_in, z_dim=3, drop_enc1=0.265, drop_enc2=0.325, drop_mu=0.163, drop_log_var=0.345, 
+    model_ae = AE(input_features=len_in, z_dim=3, drop_enc1=0.265, drop_enc2=0.325, drop_enc3=0.2, 
                     drop_dec1=0.196, drop_dec2=0.283, drop_dec3=0.284).to(device)
     model_ae = model_ae.to(device)
 
@@ -157,17 +157,14 @@ def train(device, var, lr_ae, decay_ae, batch_size, nb_epochs, train_losses, tes
             input_batch = input_train[i_batch][:,var,:].to(device)
             optimizer_vae.zero_grad()
             # forward pass
-            x_reconst, mu, log_var = model_ae(input_batch)
+            x_reconst = model_ae(input_batch)
 
             # compute loss
             reconst_loss = F.mse_loss(x_reconst, input_batch, reduction='mean')
-            kl_div = - 0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
-            loss =  reconst_loss + kl_div
-            corrected_loss =  reconst_loss + kl_div*kl_factor
-            tot_losses += loss.item()
+            tot_losses += reconst_loss.item()
 
             # backward pass
-            corrected_loss.backward()
+            reconst_loss.backward()
             optimizer_vae.step()
 
         train_losses.append(tot_losses/n_batches)       # loss moyenne sur tous les batchs 
