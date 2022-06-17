@@ -73,7 +73,6 @@ class AE(nn.Module):
                                         nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_dec3),
                                         nn.Linear(hidden_size1, input_features))
-
         
     def encode(self, x):
         z = self.encoder(x)
@@ -127,6 +126,56 @@ class DNN(nn.Module):
     def forward(self, x):
         return self.regression(x)
 
+class AE_DNN(nn.Module):
+    '''
+    ## Description
+    Autoencoder to reduce input dimension with a feed forward network for flux prediction.
+    '''
+    def __init__(self, u_ae, v_ae, w_ae, theta_ae, s_ae, tke_ae, nn_net):
+        '''
+        ## Description
+        initialise an autoencoder with a feed forward network for flux prediction.
+
+        ## Parameters
+        - input_features (int) : number of input features
+        - hidden_size1 (int) : number of hidden units in the encoder first hidden layer and decoder third hidden layer, default=128
+        - hidden_size2 (int) : number of hidden units in the encoder second hidden layer and decoder third hidden layer, default=128
+        - z_dim (int) : dimension of the latent space, default=3
+        - drop_enc1 (float) : dropout probability in the encoder first hidden layer, default=0.3
+        - drop_enc2 (float) : dropout probability in the encoder second hidden layer, default=0.2
+        - drop_mu (float) : dropout probability in the mu layer, default=0.3
+        - drop_log_var (float) : dropout probability in the log_var layer, default=0.25
+        - drop_dec1 (float) : dropout probability in the decoder first hidden layer, default=0.3
+        - drop_dec2 (float) : dropout probability in the decoder second hidden layer, default=0.2
+        - drop_dec3 (float) : dropout probability in the decoder third hidden layer, default=0.2
+        '''
+        super(AE_DNN, self).__init__()
+        self.u_ae = u_ae
+        self.v_ae = v_ae
+        self.w_ae = w_ae
+        self.theta_ae = theta_ae
+        self.s_ae = s_ae
+        self.tke_ae = tke_ae
+        self.nn_net = nn_net
+
+    def forward(self, x):
+        if x.shape[0] == 6:
+            z_u = self.u_ae.encode(x[0])
+            z_v = self.v_ae.encode(x[1])
+            z_w = self.w_ae.encode(x[2])
+            z_theta = self.theta_ae.encode(x[3])
+            z_s = self.s_ae.encode(x[4])
+            z_tke = self.tke_ae.encode(x[5])
+        else :
+            z_u = self.u_ae.encode(x[:,0])
+            z_v = self.v_ae.encode(x[:,1])
+            z_w = self.w_ae.encode(x[:,2])
+            z_theta = self.theta_ae.encode(x[:,3])
+            z_s = self.s_ae.encode(x[:,4])
+            z_tke = self.tke_ae.encode(x[:,5])
+        latent_var = torch.cat((z_u, z_v, z_w, z_theta, z_s, z_tke), dim=1)
+        return self.nn_net(latent_var)
+
 def test(model, device, ae_models, input_test, output_test):
     '''
     ## Description
@@ -140,12 +189,7 @@ def test(model, device, ae_models, input_test, output_test):
     '''
     model.eval()                                    # on a une loss en moyenne 2 fois plus petite
     # prediction
-    latent_variables = []
-    for var in range(len(ae_models)) :
-        z = ae_models[var].encode(input_test[:,var,:].to(device)).cpu().detach().numpy()
-        latent_variables.append(z)
-    latent_tensor = torch.from_numpy(np.array(latent_variables)).reshape(-1, z.shape[1]*len(ae_models)).to(device)
-    output_pred = model(latent_tensor)
+    output_pred = model(input_test.to(device))
     # compute loss
     test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
     return test_loss.item()
@@ -174,25 +218,21 @@ def train(device, learning_rates, ae_models, nb_epochs, models, train_losses, te
     for i in range(len(learning_rates)):
         train_losses_lr = []
         test_losses_lr = []
-        model = DNN(input_size=len_in,output_size=len_out)
+        nn_model = DNN(input_size=len_in,output_size=len_out).to(device)
+        model = AE_DNN(ae_models[0], ae_models[1], ae_models[2], ae_models[3], ae_models[4], ae_models[5], nn_model)
         model = model.to(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rates[i])
+        optimizer = torch.optim.Adam(nn_model.parameters(), lr=learning_rates[i])
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95, last_epoch= -1)
         for epoch in trange(nb_epochs, leave=False):
             model.train()
             tot_losses=0
             indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
             for i_batch in indexes_arr:
-                latent_variables = []
                 input_batch = input_train[i_batch].to(device)
                 output_batch = output_train[i_batch].to(device)
                 optimizer.zero_grad()
                 # forward pass
-                for var in range(len(ae_models)) :
-                    z = ae_models[var].encode(input_batch[:,var,:]).cpu().detach().numpy()
-                    latent_variables.append(z)
-                latent_tensor = torch.from_numpy(np.array(latent_variables)).reshape(-1, z.shape[1]*len(ae_models)).to(device)
-                output_pred = model(latent_tensor)
+                output_pred = model(input_batch)
                 # compute loss
                 loss = F.mse_loss(output_pred, output_batch, reduction='mean')
                 tot_losses += loss.item()
@@ -210,7 +250,7 @@ def train(device, learning_rates, ae_models, nb_epochs, models, train_losses, te
         train_losses.append(train_losses_lr)
         test_losses.append(test_losses_lr)
         models.append(model)
-        
+
         print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs, tot_losses/n_batches))
 
 def main():
@@ -228,13 +268,14 @@ def main():
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
     ae_models = []
     for var in variables[:-1]:
-        model = AE(input_features=nz)
-        model.load_state_dict(torch.load('explo/models/{}_ae_net.pt'.format(var), map_location=torch.device(device)))
-        model.to(device)
-        model.eval()
-        ae_models.append(model)
+        ae_model = AE(input_features=nz)
+        ae_model.load_state_dict(torch.load('explo/models/{}_ae_net.pt'.format(var), map_location=torch.device(device)))
+        ae_model.to(device)
+        for params in ae_model.parameters():
+            params.requires_grad = False
+        ae_models.append(ae_model)
 
-    nb_var = len(variables) - 1
+    nb_var = len(variables)-1
     full_len_in = nz*(len(variables)-1)
     len_in = nz
     len_out = nz
