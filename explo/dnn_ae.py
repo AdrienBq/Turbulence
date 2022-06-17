@@ -201,7 +201,7 @@ def train(device, learning_rates, ae_models, nb_epochs, models, train_losses, te
             #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                                 # on a une loss en moyenne 2 fois plus petite
 
-            test_losses.append(test(model, device, input_test, output_test))
+            test_losses.append(test(model, device, ae_models, input_test, output_test))
 
             if epoch < 200:
                 scheduler.step()
