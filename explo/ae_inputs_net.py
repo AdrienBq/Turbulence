@@ -133,8 +133,8 @@ def train(device, var, lr_ae, decay_ae, batch_size, nb_epochs, train_losses, tes
 
     # define model
     n_batches = input_train.shape[0]//batch_size
-    model_ae = AE(input_features=len_in, z_dim=3, drop_enc1=0.29, drop_enc2=0.48, drop_enc3=0.29, 
-                    drop_dec1=0.11, drop_dec2=0.38, drop_dec3=0.11).to(device)
+    model_ae = AE(input_features=len_in, z_dim=3, drop_enc1=0.22, drop_enc2=0.3, drop_enc3=0.21, 
+                    drop_dec1=0.10, drop_dec2=0.38, drop_dec3=0.11).to(device)
     model_ae = model_ae.to(device)
 
     # Generate the optimizers.
@@ -225,7 +225,7 @@ def main():
         ins[j] = input
 
     var = 2     # 0 = u, 1 = v, 2 = w, 3 = theta, 4 = s, 5 = tke, 6 = wtheta
-    lr_vae = 0.00097
+    lr_vae = 0.00094
     decay_vae = 0.99
     batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
     nb_epochs = 50              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
