@@ -92,7 +92,7 @@ class DNN(nn.Module):
     ## Description
     Simple feed forward network with 3 hidden layers using linear layers, batchnorm, dropout and ReLU activation. All layers are fully connected.
     '''
-    def __init__(self, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=1024, hidden_size2=512, hidden_size3=256):
+    def __init__(self, input_size, output_size, drop_prob1=0.2, drop_prob2=0.3, drop_prob3=0.4, hidden_size1=256, hidden_size2=512, hidden_size3=256):
         '''
         ## Description
         initialise a simple feed forward network with 3 hidden layers using linear layers, batchnorm, dropout and ReLU activation. All lyaers are fully connected.
@@ -142,7 +142,7 @@ def test(model, device, ae_models, input_test, output_test):
     # prediction
     latent_variables = []
     for var in range(len(ae_models)) :
-        z = ae_models[var].encode(input_test[:,var,:].to(device))
+        z = ae_models[var].encode(input_test[:,var,:].to(device)).detach.numpy()
         latent_variables.append(z)
     latent_tensor = torch.from_numpy(np.array(latent_variables)).reshape(-1, z.shape[0]*len(ae_models)).to(device)
     output_pred = model(latent_tensor)
@@ -188,9 +188,9 @@ def train(device, learning_rates, ae_models, nb_epochs, models, train_losses, te
                 optimizer.zero_grad()
                 # forward pass
                 for var in range(len(ae_models)) :
-                    z = ae_models[var].encode(input_batch[:,var,:])
+                    z = ae_models[var].encode(input_batch[:,var,:]).detach().numpy()
                     latent_variables.append(z)
-                latent_tensor = torch.from_numpy(np.array(latent_variables)).reshape(-1, z.shape[0]*len(ae_models)).to(device)
+                latent_tensor = torch.from_numpy(np.array(latent_variables)).reshape(-1, z.shape[1]*len(ae_models)).to(device)
                 output_pred = model(latent_tensor)
                 # compute loss
                 loss = F.mse_loss(output_pred, output_batch, reduction='mean')
@@ -224,7 +224,7 @@ def main():
     latent_dim = 3
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
     ae_models = []
-    for var in variables[:4] :
+    for var in variables[:-1]:
         model = AE(input_features=nz)
         model.load_state_dict(torch.load('explo/models/{}_ae_net.pt'.format(var), map_location=torch.device(device)))
         model.eval()
@@ -254,17 +254,22 @@ def main():
     ins = [input_train, input_test]
     outs = [output_train, output_test]
 
-    for input in ins:
-        input = input.reshape(-1,len(variables)-1,nz)
+    for j in range(len(ins)):
+        input = ins[j].reshape(-1,len(variables)-1,nz)
         for i in range(len(variables)-1):
             input[:,i] -= input[:,i].mean()
             input[:,i] /= input[:,i].std()
         input = input.to(device)
+        ins[j] = input
 
-    for output in outs:
+    for j in range(len(outs)):
+        output = outs[j]
         output -= output.mean()
         output /= output.std()
         output = output.to(device)
+        outs[j] = output
+    
+    input_train, input_test, output_train, output_test = ins[0], ins[1], outs[0], outs[1]
 
     learning_rates = [1e-2,1e-3]
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
