@@ -166,6 +166,76 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, log_var)
         return self.regression(z)
 
+# AE model
+class AE(nn.Module):
+    def __init__(self, input_features=376,  hidden_size1=256, hidden_size2=128, z_dim=3, 
+                drop_enc1=0.3, drop_enc2=0.2, drop_enc3=0.3, 
+                drop_dec1 = 0.3, drop_dec2=0.2, drop_dec3=0.2):
+        super(AE, self).__init__()
+        self.encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_enc1),
+                                        nn.Linear(input_features, hidden_size1),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_enc2),
+                                        nn.Linear(hidden_size1, hidden_size2),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_enc3),
+                                        nn.Linear(hidden_size2, z_dim))
+        self.decoder = nn.Sequential(nn.BatchNorm1d(z_dim, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_dec1),
+                                        nn.Linear(z_dim, hidden_size2),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_dec2),
+                                        nn.Linear(hidden_size2, hidden_size1),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_dec3),
+                                        nn.Linear(hidden_size1, input_features))
+
+        
+    def encode(self, x):
+        z = self.encoder(x)
+        return z
+
+    def decode(self, z):
+        return self.decoder(z)
+
+    def forward(self, x):
+        z = self.encode(x)
+        return self.decode(z)
+
+class AE_DNN(nn.Module):
+    def __init__(self, u_ae, v_ae, w_ae, theta_ae, s_ae, tke_ae, nn_net):
+        super(AE_DNN, self).__init__()
+        self.u_ae = u_ae
+        self.v_ae = v_ae
+        self.w_ae = w_ae
+        self.theta_ae = theta_ae
+        self.s_ae = s_ae
+        self.tke_ae = tke_ae
+        self.nn_net = nn_net
+
+    def forward(self, x):
+        if x.shape[0] == 6:
+            z_u = self.u_ae.encode(x[0])
+            z_v = self.v_ae.encode(x[1])
+            z_w = self.w_ae.encode(x[2])
+            z_theta = self.theta_ae.encode(x[3])
+            z_s = self.s_ae.encode(x[4])
+            z_tke = self.tke_ae.encode(x[5])
+        else :
+            z_u = self.u_ae.encode(x[:,0])
+            z_v = self.v_ae.encode(x[:,1])
+            z_w = self.w_ae.encode(x[:,2])
+            z_theta = self.theta_ae.encode(x[:,3])
+            z_s = self.s_ae.encode(x[:,4])
+            z_tke = self.tke_ae.encode(x[:,5])
+        latent_var = torch.cat((z_u, z_v, z_w, z_theta, z_s, z_tke), dim=1)
+        return self.nn_net(latent_var)
+
 
 def main():
 
@@ -180,6 +250,7 @@ def main():
     len_in = nz*(len(variables)-1)
     len_out = nz
     latent_dim = 11
+    z_dim = 18
     reduced_len = 30
     n_in_features = len(variables)-1
 
@@ -233,8 +304,8 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    model_names = ["conv", "pca", "simple", "vae"]
-    net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in, len_out], [len_in,latent_dim,len_out]]
+    model_names = ["conv", "pca", "vae", 'ae']
+    net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,latent_dim,len_out], [z_dim, len_out]]
     net_preds = []
     losses = []
 
@@ -263,9 +334,23 @@ def main():
             model = VAE(input_features=net_params[i][0], z_dim=net_params[i][1], output_features=net_params[i][2])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
+        elif name == 'ae':
+            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
+            nn_model = DNN(input_size=net_params[i][0], output_size=net_params[i][1], hidden_size1=256)
+            ae_models = []
+            for var in variables[:-1] :
+                ae_model = AE(input_features=nz)
+                ae_model.load_state_dict(torch.load('explo/models/{}_ae_net.pt'.format(var), map_location=torch.device(device)))
+                ae_model.to(device)
+                ae_model.eval()
+                ae_models.append(ae_model)
+            model = AE_DNN(ae_models[0], ae_models[1], ae_models[2], ae_models[3], ae_models[4], ae_models[5], nn_model)
+            model.load_state_dict(torch.load('explo/models/dnn_ae_net.pt', map_location=torch.device('cpu')))
+
         else :
             raise Exception("{} model is not supported".format(name)) 
 
+        model.to(device)
         model.eval()
 
         # prediction
