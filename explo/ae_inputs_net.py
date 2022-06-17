@@ -174,7 +174,7 @@ def train(device, var, lr_ae, decay_ae, batch_size, nb_epochs, train_losses, tes
 
         if epoch < 50:
             scheduler_vae.step()
-        if epoch % 5 == 0:
+        if epoch % 10 == 0:
             print('Model {},{},{},Epoch [{}/{}], Train Loss: {:.6f}, Test_loss: {:.6f}'.format(lr_ae, decay_ae, batch_size, epoch+1, nb_epochs, train_losses[-1], test_losses[-1]))
     return model_ae
 
@@ -224,11 +224,11 @@ def main():
             input[:,i] /= torch.std(input[:,i])
         ins[j] = input
 
-    var = 0     # 0 = u, 1 = v, 2 = w, 3 = theta, 4 = s, 5 = tke, 6 = wtheta
+    var = 1     # 0 = u, 1 = v, 2 = w, 3 = theta, 4 = s, 5 = tke, 6 = wtheta
     lr_vae = 0.000386
     decay_vae = 0.918
     batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 100              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 50              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]            # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
 
@@ -240,15 +240,15 @@ def main():
 
 
     try :
-        plt.plot(train_losses_arr[5:], label='train')
-        plt.plot(test_losses_arr[5:], label='test')
+        plt.plot(train_losses_arr[2:], label='train')
+        plt.plot(test_losses_arr[2:], label='test')
         plt.title(f"VAE for {variables[var]}")
         plt.legend()
     except :
         pass
 
     plt.show()
-    plt.savefig(f"explo/images/losses_vae_opt_{variables[var]}.png")
+    plt.savefig(f"explo/images/losses_ae_opt_{variables[var]}.png")
 
 
 if __name__ == '__main__':
