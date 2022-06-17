@@ -225,7 +225,7 @@ def main():
         ins[j] = input
 
     var = 1     # 0 = u, 1 = v, 2 = w, 3 = theta, 4 = s, 5 = tke, 6 = wtheta
-    lr_vae = 0.000097
+    lr_vae = 0.00097
     decay_vae = 0.99
     batch_size = 32            # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
     nb_epochs = 50              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
