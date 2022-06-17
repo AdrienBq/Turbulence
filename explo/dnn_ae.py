@@ -224,7 +224,7 @@ def main():
     latent_dim = 3
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
     ae_models = []
-    for var in variables :
+    for var in variables[:4] :
         model = AE(input_features=nz)
         model.load_state_dict(torch.load('explo/models/{}_ae_net.pt'.format(var), map_location=torch.device(device)))
         model.eval()
