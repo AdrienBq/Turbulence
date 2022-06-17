@@ -207,7 +207,7 @@ def train(device, learning_rates, ae_models, nb_epochs, models, train_losses, te
                 scheduler.step()
 
         models.append(model)
-        print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs[i], tot_losses/n_batches))
+        print('Model {},Epoch [{}/{}], Loss: {:.6f}'.format(i+1,epoch+1, nb_epochs, tot_losses/n_batches))
 
 def main():
     '''
