@@ -144,7 +144,7 @@ def test(model, device, ae_models, input_test, output_test):
     for var in range(len(ae_models)) :
         z = ae_models[var].encode(input_test[:,var,:].to(device)).cpu().detach().numpy()
         latent_variables.append(z)
-    latent_tensor = torch.from_numpy(np.array(latent_variables)).reshape(-1, z.shape[0]*len(ae_models)).to(device)
+    latent_tensor = torch.from_numpy(np.array(latent_variables)).reshape(-1, z.shape[1]*len(ae_models)).to(device)
     output_pred = model(latent_tensor)
     # compute loss
     test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
