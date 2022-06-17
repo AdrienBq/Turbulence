@@ -187,7 +187,7 @@ def train(device, learning_rates, ae_models, nb_epochs, models, train_losses, te
                 optimizer.zero_grad()
                 # forward pass
                 for var in range(len(ae_models)) :
-                    z = ae_models[var].encode(input_batch[:,var,:]).detach().numpy()
+                    z = ae_models[var].encode(input_batch[:,var,:]).cpu().detach().numpy()
                     latent_variables.append(z)
                 latent_tensor = torch.from_numpy(np.array(latent_variables)).reshape(-1, z.shape[1]*len(ae_models)).to(device)
                 output_pred = model(latent_tensor)
