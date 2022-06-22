@@ -142,7 +142,6 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
             for batch_size in batch_sizes :
                 n_batches = input_train.shape[0]//batch_size
                 model = CNN(input_features=len_in,output_features=len_out)
-                print(model)
                 model = model.to(device)
                 print(device)
                 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
