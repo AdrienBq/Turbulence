@@ -260,7 +260,7 @@ def main():
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
-    torch.save(models[0].state_dict(), f"explo/models/conv_net_opt_{0}.pt")
+    torch.save(models[0].state_dict(), f"explo/models/conv_ae_net_{0}.pt")
 
     fig,axes = plt.subplots(len(learning_rates),len(batch_sizes)*len(decays),figsize=(5*len(learning_rates),4*len(batch_sizes)*len(decays)))
 

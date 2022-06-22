@@ -237,6 +237,79 @@ class AE_DNN(nn.Module):
         return self.nn_net(latent_var)
 
 
+class AE_CNN(nn.Module):
+    '''
+    ## Description
+    Convolutional neural network with 2 convolutional layers and 4 fully connected layers. 
+    Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
+    '''
+    def __init__(self, input_features, output_features, drop_prob1=0.301, drop_prob2=0.121, drop_prob3=0.125, hidden_size1=288, hidden_size2=471, hidden_size3=300):
+        '''
+        ## Description
+        Convolutional neural network with 2 convolutional layers and 4 fully connected layers. 
+        Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
+        Parameters are optimized using Optuna in the conv_net_optuna.py file.
+
+        ## Parameters
+        - input_features (int) : number of input features (number of input channels of the first convolutional layer)
+        - output_features (int) : number of output features (size of the output of the last linear layer)
+        - drop_prob1 (float) : dropout probability for the first hidden layer, default : 0.301
+        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.121
+        - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.125
+        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 288
+        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 471
+        - hidden_size3 (int) : number of neurons in the third hidden layer, default : 300
+        '''
+        super(AE_CNN, self).__init__()
+        self.conv1 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True)
+        self.conv2 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
+        self.conv3 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
+        self.bn1 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.bn2 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.bn3 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+
+        self.deconv1 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
+        self.deconv2 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
+        self.deconv3 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
+        self.deconv4 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
+        self.bn4 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.bn5 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.bn6 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        
+        self.in_pred = int(input_features*(output_features-1)/(5*5*3))
+        self.regression = nn.Sequential(nn.BatchNorm1d(self.in_pred, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Linear(self.in_pred, hidden_size1),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_prob1),
+                                        nn.Linear(hidden_size1, hidden_size2),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_prob2),
+                                        nn.Linear(hidden_size2, hidden_size3),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_prob3),
+                                        nn.Linear(hidden_size3, output_features))
+                                        
+    def encode(self, x):
+        x = F.max_pool1d(input=self.conv1(self.bn1(x)), kernel_size=5)
+        x = F.max_pool1d(input=self.conv2(self.bn2(x)), kernel_size=5)
+        x = F.max_pool1d(input=self.conv3(self.bn3(x)), kernel_size=3)
+        return x
+
+    def decode(self, x):
+        x = F.upsample(input=self.bn4(self.deconv1(x)), scale_factor=3, mode='linear')
+        x = F.upsample(input=self.bn5(self.deconv2(x)), scale_factor=5, mode='linear')
+        x = F.upsample(input=self.bn6(self.deconv3(x)), scale_factor=5, mode='linear')
+        return self.deconv4(x)
+
+    def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
+        x = self.encode(x)
+        x = torch.flatten(x, start_dim=1,end_dim=-1)
+        return self.regression(x)
+
+
 def main():
 
     #----------------PREPARE DATA----------------
@@ -304,8 +377,8 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    model_names = ["conv", "pca", "vae", 'ae']
-    net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,latent_dim,len_out], [z_dim, len_out]]
+    model_names = ["conv", "pca", "vae", 'ae', 'conv_ae']
+    net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,latent_dim,len_out], [z_dim, len_out], [n_in_features, len_out]]
     net_preds = []
     losses = []
 
@@ -346,6 +419,11 @@ def main():
                 ae_models.append(ae_model)
             model = AE_DNN(ae_models[0], ae_models[1], ae_models[2], ae_models[3], ae_models[4], ae_models[5], nn_model)
             model.load_state_dict(torch.load('explo/models/dnn_ae_net.pt', map_location=torch.device('cpu')))
+
+        elif name == 'conv_ae':
+            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
+            model = AE_CNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         else :
             raise Exception("{} model is not supported".format(name)) 
