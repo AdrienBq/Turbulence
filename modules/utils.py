@@ -396,7 +396,7 @@ def make_train_test_ds(coarse_factors, len_in, train_times, test_times, Director
 def rho(w,l):  return w #+ [None,0.1,0.0,0.0][l] * np.maximum(0,w)
 def incr(z,l): return z #+ [None,0.0,0.1,0.0][l] * (z**2).mean()**.5+1e-9
 
-def lrp(model,input,z,one_alt=True):
+def lrp(model,input,sample=200,z=0,one_alt=False):
     '''
     ## Description
     Layer-wise relevance propagation for a model taking the altitude as input and outputing the predicted heat flux at a single altitude.
@@ -412,6 +412,9 @@ def lrp(model,input,z,one_alt=True):
     else:
         X = input
     Y = model(X).detach().numpy()
+    if X.shape[0] != 376:
+        X = X[sample]
+        Y = Y[sample]
     X = X.numpy()
     W = []
     B=[]
@@ -464,8 +467,11 @@ def lrp(model,input,z,one_alt=True):
     R[0] = A[0]*c-lb*cp-hb*cm 
     #print(R[0].max())                          # step 4
 
-    if one_alt:
-        plot_ds = R[0][:-1].reshape(376,6)
+    if R[0].shape[0] != 376:
+        if one_alt:
+            plot_ds = R[0][:-1].reshape(376,6)
+        else:
+            plot_ds = R[0].reshape(376,6)
     else:
-        plot_ds = R[0].reshape(376,6)
+        plot_ds = R[0]
     return plot_ds

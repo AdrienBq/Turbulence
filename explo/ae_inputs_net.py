@@ -199,12 +199,10 @@ def main():
     tmax=62+1
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # print('using cuda : ', torch.cuda.is_available())
 
     path_times_train = f'data/test_train_times/times_train_{model_number}.csv'
     path_times_test = f'data/test_train_times/times_test_{model_number}.csv'
     isFile = os.path.isfile(path_times_train) and os.path.isfile(path_times_test)
-    #print(isFile)
 
     if not isFile :
         utils.split_times(tmin,tmax,model_number)
