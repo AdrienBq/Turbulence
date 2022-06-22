@@ -185,9 +185,9 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                     if epoch < 100:
                         scheduler.step()
 
-                print('Model {},{},{},Epoch [{}/{}], Loss: {:.6f}'.format(learning_rate, decay, batch_size, epoch+1, nb_epochs[0], tot_losses/n_batches))
-                train_losses_decay.append(train_losses_bs)
-                test_losses_decay.append(test_losses_bs)
+                print('Model {},{},{},Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(learning_rate, decay, batch_size, epoch+1, nb_epochs[0], test_losses_bs[-1][1], test_losses_bs[-1][2]))
+                train_losses_decay.append(train_losses_bs[0])
+                test_losses_decay.append(test_losses_bs[0])
             train_losses_lr.append(train_losses_decay)
             test_losses_lr.append(test_losses_decay)
         train_losses.append(train_losses_lr)
