@@ -104,10 +104,13 @@ def test(model, device, input_test, output_test):
     '''
     model.eval()
     # prediction
+    ae_output = model.decode(model.encode(input_test.to(device)))
     output_pred = model(input_test.to(device))
     # compute loss
+    ae_loss = F.mse_loss(ae_output, input_test.to(device))
     test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
-    return test_loss.item()
+    tot_loss = ae_loss + test_loss
+    return tot_loss.item(), ae_loss.item(), test_loss.item()
 
 def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
     '''
@@ -174,7 +177,11 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                     train_losses_bs.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
                     #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                                     # on a une loss en moyenne 2 fois plus petite
-                    test_losses_bs.append(test(model, device, input_test, output_test))
+                    test_loss = test(model, device, input_test, output_test)
+                    test_losses_bs.append(test_loss[0])
+
+                    if epoch%10 == 0:
+                        print('ae_loss :', test_loss[1], 'pred_loss :', test_loss[2])
 
                     if epoch < 100:
                         scheduler.step()
