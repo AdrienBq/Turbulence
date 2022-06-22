@@ -348,8 +348,8 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     input_train, output_train, input_test, output_test = utils.make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory)
-    ins = [input_train, input_test]
-    outs = [output_train, output_test]
+    ins = [input_train.to(device), input_test.to(device)]
+    outs = [output_train.to(device), output_test.to(device)]
 
     for j in range(len(ins)):
         input = ins[j]
