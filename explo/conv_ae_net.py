@@ -81,7 +81,7 @@ class CNN(nn.Module):
         return x
 
     def decode(self, x):
-        x = F.upsample(input=self.bn4(self.deconv1(x)), scale_factor=5, mode='linear')
+        x = F.upsample(input=self.bn4(self.deconv1(x)), scale_factor=3, mode='linear')
         x = F.upsample(input=self.bn5(self.deconv2(x)), scale_factor=5, mode='linear')
         x = F.upsample(input=self.bn6(self.deconv3(x)), scale_factor=5, mode='linear')
         return self.deconv4(x)
