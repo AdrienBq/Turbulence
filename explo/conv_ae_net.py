@@ -151,11 +151,11 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                 test_losses_bs = []
                 for epoch in trange(nb_epochs[0], leave=False):
                     model.train()
-                    if epoch%2 == 0:
-                        for param in model.parameters():
-                            pass
-                            #param.requires_grad = False
-
+                    for param in model.regression.parameters():
+                        param.requires_grad = False
+                    if epoch>20 :
+                        for param in model.regression.parameters():
+                            param.requires_grad = True
                     tot_losses=0
                     indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
                     for i_batch in indexes_arr:
@@ -283,7 +283,7 @@ def main():
         pass
 
     plt.show()
-    plt.savefig(f"explo/images/losses_conv_opt.png")
+    plt.savefig(f"explo/images/losses_conv_ae.png")
 
 
 if __name__ == '__main__':
