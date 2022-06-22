@@ -58,7 +58,7 @@ class CNN(nn.Module):
         self.bn5 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.bn6 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         
-        self.in_pred = int(input_features*(output_features-1)/(5**3))
+        self.in_pred = int(input_features*(output_features-1)/(5*5*3))
         self.regression = nn.Sequential(nn.BatchNorm1d(self.in_pred, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Linear(self.in_pred, hidden_size1),
                                         nn.ReLU(),
@@ -77,7 +77,7 @@ class CNN(nn.Module):
     def encode(self, x):
         x = F.max_pool1d(input=self.conv1(self.bn1(x)), kernel_size=5)
         x = F.max_pool1d(input=self.conv2(self.bn2(x)), kernel_size=5)
-        x = F.max_pool1d(input=self.conv3(self.bn3(x)), kernel_size=5)
+        x = F.max_pool1d(input=self.conv3(self.bn3(x)), kernel_size=3)
         return x
 
     def decode(self, x):
