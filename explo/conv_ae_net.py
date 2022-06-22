@@ -149,7 +149,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                 models.append(model)
                 train_losses_bs = []
                 test_losses_bs = []
-                for epoch in trange(nb_epochs[0], leave=False):
+                for epoch in trange(nb_epochs, leave=False):
                     model.train()
                     for param in model.regression.parameters():
                         param.requires_grad = False
@@ -177,7 +177,7 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                     #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
                                                                     # on a une loss en moyenne 2 fois plus petite
                     test_loss = test(model, device, input_test, output_test)
-                    test_losses_bs.append(test_loss[0])
+                    test_losses_bs.append(test_loss)
 
                     if epoch%10 == 0:
                         print('ae_loss :', test_loss[1], 'pred_loss :', test_loss[2])
@@ -185,9 +185,9 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
                     if epoch < 100:
                         scheduler.step()
 
-                print('Model {},{},{},Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(learning_rate, decay, batch_size, epoch+1, nb_epochs[0], test_losses_bs[-1][1], test_losses_bs[-1][2]))
-                train_losses_decay.append(train_losses_bs[0])
-                test_losses_decay.append(test_losses_bs[0])
+                print('Model {},{},{},Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(learning_rate, decay, batch_size, epoch+1, nb_epochs, test_losses_bs[-1][1], test_losses_bs[-1][2]))
+                train_losses_decay.append(train_losses_bs[:][0])
+                test_losses_decay.append(test_losses_bs[:][0])
             train_losses_lr.append(train_losses_decay)
             test_losses_lr.append(test_losses_decay)
         train_losses.append(train_losses_lr)
@@ -251,7 +251,7 @@ def main():
     learning_rates = [1e-3, 1e-4]
     decays = [0.99, 0.97, 0.95]
     batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = [50]               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 50               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
