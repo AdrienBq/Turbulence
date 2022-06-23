@@ -102,15 +102,13 @@ def test(model, device, input_test, output_test):
     ae_loss = F.mse_loss(ae_output, input_test.to(device))
     test_loss = F.mse_loss(output_pred, output_test.to(device), reduction='mean')
     tot_loss = ae_loss + test_loss
-    return tot_loss.item()
+    return tot_loss.item(), ae_loss.item(), test_loss.item()
 
 def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
 
     n_batches = input_train.shape[0]//batch_size
     model = AE_CNN(input_features=len_in,output_features=len_out)
-    print(model)
     model = model.to(device)
-    print(device)
 
     lr_enc = trial.suggest_float("lr_enc", 1e-5, 1e-2, log=True)
     decay_enc = trial.suggest_float("decay_enc", 0.9, 0.99,)
@@ -126,7 +124,6 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
     optimizer_reg = torch.optim.Adam(model.regression.parameters(), lr=lr_reg)
     scheduler_reg = torch.optim.lr_scheduler.ExponentialLR(optimizer_reg, decay_reg, last_epoch= -1)
 
-    
     for epoch in trange(nb_epochs, leave=False):
         model.train()
         for param in model.regression.parameters():
@@ -155,19 +152,16 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
             optimizer_enc.step()
             optimizer_dec.step()
             optimizer_reg.step()
-        train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
-        #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
-                                                        # on a une loss en moyenne 2 fois plus petite
-        test_loss = test(model, device, input_test, output_test)
-        test_losses.append(test_loss[0])
 
-        if epoch%10 == 0:
-            print('ae_loss :', test_loss[1], 'pred_loss :', test_loss[2])
+        train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
+        test_loss = test(model, device, input_test, output_test)
+        test_losses.append(test_loss)
 
         if epoch < 100:
             scheduler_enc.step()
             scheduler_dec.step()
-            scheduler_reg.step()
+            if epoch>20:
+                scheduler_reg.step()
 
         trial.report(test_losses[-1][0], epoch)
 
@@ -195,7 +189,6 @@ def objective(trial):
     tmax=62+1
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # print('using cuda : ', torch.cuda.is_available())
 
     path_times_train = f'data/test_train_times/times_train_{model_number}.csv'
     path_times_test = f'data/test_train_times/times_test_{model_number}.csv'
@@ -242,6 +235,7 @@ if __name__ == '__main__':
     pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
+    print('using cuda : ', torch.cuda.is_available())
     study.optimize(objective, n_trials=50, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])

@@ -22,20 +22,28 @@ print('cuda available : ', torch.cuda.is_available())
 class AE_CNN(nn.Module):
     '''
     ## Description
-    Convolutional neural network with 2 convolutional layers and 4 fully connected layers. 
+    Double neural network combining an AE with a simple feedforward network.
+    The AE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
+    The convolutional auto_encoder network with 3 convolutional layers for the encoder and 4 for the decoder. 
+    Latent space dim is 6*5=30.
     Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
+    Feedforward net has 4 fully connected layers using batchnorm, dropout and ReLU activation.
     '''
     def __init__(self, input_features, output_features, drop_prob1=0.301, drop_prob2=0.121, drop_prob3=0.125, hidden_size1=288, hidden_size2=471, hidden_size3=300):
         '''
         ## Description
-        Convolutional neural network with 2 convolutional layers and 4 fully connected layers. 
+        Double neural network combining an AE with a simple feedforward network.
+        The AE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
+        The convolutional auto_encoder network with 3 convolutional layers for the encoder and 4 for the decoder. 
+        Latent space dim is 6*5=30.
         Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
-        Parameters are optimized using Optuna in the conv_net_optuna.py file.
+        Feedforward net has 4 fully connected layers using batchnorm, dropout and ReLU activation.
+        Parameters are optimized using Optuna in the conv_ae_net_optuna.py file.
 
         ## Parameters
         - input_features (int) : number of input features (number of input channels of the first convolutional layer)
         - output_features (int) : number of output features (size of the output of the last linear layer)
-        - drop_prob1 (float) : dropout probability for the first hidden layer, default : 0.301
+        - drop_prob1 (float) : dropout probability for the first hidden layer of the feedforward net, default : 0.301
         - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.121
         - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.125
         - hidden_size1 (int) : number of neurons in the first hidden layer, default : 288
@@ -112,17 +120,15 @@ def test(model, device, input_test, output_test):
     tot_loss = ae_loss + test_loss
     return tot_loss.item(), ae_loss.item(), test_loss.item()
 
-def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
+def train(device, batch_size, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
     '''
     ## Description
     Train the model on the training set. Loop to train multiple models with different learning rates, batch sizes and decays.
 
     ## Parameters
     - device: the device to use for the model
-    - learning_rates (list) : list of learning rates to use
-    - decays (list) : list of decays to use
-    - batch_sizes (list) : list of batch sizes to use
-    - nb_epochs (list) : number of epochs to train the model
+    - batch_sizes (int) : list of batch sizes to use
+    - nb_epochs (int) : number of epochs to train the model
     - models (list) : empty list to store the models
     - train_losses (list) : empty list to store the training losses
     - test_losses (list) : empty list to store the test losses
@@ -133,66 +139,70 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
     - len_in (int) : the length of the input data (here it's the number of input channels of the first convolutional layer)
     - len_out (int) : the length of the output data
     '''
-    for learning_rate in learning_rates:
-        train_losses_lr = []
-        test_losses_lr = []
-        for decay in decays:
-            train_losses_decay = []
-            test_losses_decay = []
-            for batch_size in batch_sizes :
-                n_batches = input_train.shape[0]//batch_size
-                model = AE_CNN(input_features=len_in,output_features=len_out)
-                print(model)
-                model = model.to(device)
-                print(device)
-                optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-                scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, decay, last_epoch= -1)
-                models.append(model)
-                train_losses_bs = []
-                test_losses_bs = []
-                for epoch in trange(nb_epochs, leave=False):
-                    model.train()
-                    for param in model.regression.parameters():
-                        param.requires_grad = False
-                    if epoch>20 :
-                        for param in model.regression.parameters():
-                            param.requires_grad = True
-                    tot_losses=0
-                    indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
-                    for i_batch in indexes_arr:
-                        input_batch = input_train[i_batch,:,:].to(device)
-                        output_batch = output_train[i_batch,:].to(device)
-                        optimizer.zero_grad()
-                        # forward pass
-                        output_ae = model.decode(model.encode(input_batch))
-                        output_pred = model(input_batch)
-                        # compute loss
-                        ae_loss = F.mse_loss(output_ae, input_batch, reduction='mean')
-                        pred_loss = F.mse_loss(output_pred, output_batch, reduction='mean')
-                        loss = ae_loss + pred_loss
-                        tot_losses += pred_loss.item()
-                        # backward pass
-                        loss.backward()
-                        optimizer.step()
-                    train_losses_bs.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
-                    #print(tot_losses)                               # comme on a des batch 2 fois plus petit (16 au lieu de 32)
-                                                                    # on a une loss en moyenne 2 fois plus petite
-                    test_loss = test(model, device, input_test, output_test)
-                    test_losses_bs.append(test_loss)
+    
+    n_batches = input_train.shape[0]//batch_size
+    model = AE_CNN(input_features=len_in,output_features=len_out)
+    model = model.to(device)
 
-                    if epoch%10 == 0:
-                        print('ae_loss :', test_loss[1], 'pred_loss :', test_loss[2])
+    lr_enc = 1e-3
+    decay_enc = 0.9
+    lr_dec = 1e-3
+    decay_dec = 0.9
+    lr_reg = 1e-3 
+    decay_reg = 0.9
 
-                    if epoch < 100:
-                        scheduler.step()
+    optimizer_enc = torch.optim.Adam(model.encoder.parameters(), lr=lr_enc)
+    scheduler_enc = torch.optim.lr_scheduler.ExponentialLR(optimizer_enc, decay_enc, last_epoch= -1)
+    optimizer_dec = torch.optim.Adam(model.decoder.parameters(), lr=lr_dec)
+    scheduler_dec = torch.optim.lr_scheduler.ExponentialLR(optimizer_dec, decay_dec, last_epoch= -1)
+    optimizer_reg = torch.optim.Adam(model.regression.parameters(), lr=lr_reg)
+    scheduler_reg = torch.optim.lr_scheduler.ExponentialLR(optimizer_reg, decay_reg, last_epoch= -1)
 
-                print('Model {},{},{},Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(learning_rate, decay, batch_size, epoch+1, nb_epochs, test_losses_bs[-1][1], test_losses_bs[-1][2]))
-                train_losses_decay.append(train_losses_bs[:][0])
-                test_losses_decay.append(test_losses_bs[:][0])
-            train_losses_lr.append(train_losses_decay)
-            test_losses_lr.append(test_losses_decay)
-        train_losses.append(train_losses_lr)
-        test_losses.append(test_losses_lr)
+    for epoch in trange(nb_epochs, leave=False):
+        model.train()
+        for param in model.regression.parameters():
+            param.requires_grad = False
+        if epoch>20 :
+            for param in model.regression.parameters():
+                param.requires_grad = True
+        tot_losses=0
+        indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
+        for i_batch in indexes_arr:
+            input_batch = input_train[i_batch,:,:].to(device)
+            output_batch = output_train[i_batch,:].to(device)
+            optimizer_enc.zero_grad()
+            optimizer_dec.zero_grad()
+            optimizer_reg.zero_grad()
+            # forward pass
+            output_ae = model.decode(model.encode(input_batch))
+            output_pred = model(input_batch)
+            # compute loss
+            ae_loss = F.mse_loss(output_ae, input_batch, reduction='mean')
+            pred_loss = F.mse_loss(output_pred, output_batch, reduction='mean')
+            loss = ae_loss + pred_loss
+            tot_losses += pred_loss.item()
+            # backward pass
+            loss.backward()
+            optimizer_enc.step()
+            optimizer_dec.step()
+            optimizer_reg.step()
+
+        train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
+        test_loss = test(model, device, input_test, output_test)
+        test_losses.append(test_loss)
+
+        if epoch%10 == 0:
+            print('ae_loss :', test_loss[1], 'pred_loss :', test_loss[2])
+
+        if epoch < 100:
+            scheduler_enc.step()
+            scheduler_dec.step()
+            if epoch>20:
+                scheduler_reg.step()
+
+    models.append(model)
+    print('Model : lr_enc [{}], decay_enc [{:.4f}], lr_dec[{}], decay_dec [{:.4f}], lr_reg [{}], decay_reg [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(lr_enc, decay_enc, lr_dec, decay_dec, lr_reg, decay_reg, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][2]))
+                
 
 
 def main():
@@ -249,42 +259,28 @@ def main():
         output /= torch.std(output)
         outs[i] = output
 
-    learning_rates = [1e-3, 1e-4]
-    decays = [0.99, 0.97, 0.95]
-    batch_sizes = [32]             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
+    batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
     nb_epochs = 50               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
 
-    train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], n_in_features, nz)
+    train(device, batch_size, nb_epochs, models, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], n_in_features, nz)
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
     torch.save(models[0].state_dict(), f"explo/models/conv_ae_net_{0}.pt")
 
-    fig,axes = plt.subplots(len(learning_rates),len(batch_sizes)*len(decays),figsize=(5*len(learning_rates),4*len(batch_sizes)*len(decays)))
-
-    for i in range(len(learning_rates)):
-        for j in range(len(decays)):
-            for k in range(len(batch_sizes)):
-                try : 
-                    axes[i,k+j*len(batch_sizes)].plot(train_losses_arr[i,j,k,1:], label='train')
-                    axes[i,k+j*len(batch_sizes)].plot(test_losses_arr[i,j,k,1:], label='test')
-                    axes[i,k+j*len(batch_sizes)].set_title(f"d = {decays[j]}, lr = {learning_rates[i]}, bs = {batch_sizes[k]}")
-                    axes[i,k+j*len(batch_sizes)].legend()
-                except :
-                    pass
     try :
-        axes.plot(train_losses_arr[0,0,0,1:], label='train')
-        axes.plot(test_losses_arr[0,0,0,1:], label='test')
-        axes.set_title(f"d = {decays[0]}, lr = {learning_rates[0]}, bs = {batch_sizes[0]}")
-        axes.legend()
+        plt.plot(train_losses_arr[1:], label='train')
+        plt.plot(test_losses_arr[:], label='test')
+        plt.title(f"AE CONV net training")
+        plt.legend()
+        plt.show()
+        plt.savefig(f"explo/images/losses_conv_ae.png")
     except :
         pass
 
-    plt.show()
-    plt.savefig(f"explo/images/losses_conv_ae.png")
 
 
 if __name__ == '__main__':
