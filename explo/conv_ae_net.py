@@ -144,12 +144,12 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, inpu
     model = AE_CNN(input_features=len_in,output_features=len_out)
     model = model.to(device)
 
-    lr_enc = 1e-3
-    decay_enc = 0.9
-    lr_dec = 1e-3
-    decay_dec = 0.9
-    lr_reg = 1e-3 
-    decay_reg = 0.9
+    lr_enc = 5.03*1e-3
+    decay_enc = 0.909
+    lr_dec = 5.96*1e-3
+    decay_dec = 0.968
+    lr_reg = 1.09*1e-3 
+    decay_reg = 0.933
 
     optimizer_enc = torch.optim.Adam(model.encoder.parameters(), lr=lr_enc)
     scheduler_enc = torch.optim.lr_scheduler.ExponentialLR(optimizer_enc, decay_enc, last_epoch= -1)
@@ -162,7 +162,7 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, inpu
         model.train()
         for param in model.regression.parameters():
             param.requires_grad = False
-        if epoch>20 :
+        if epoch>30 :
             for param in model.regression.parameters():
                 param.requires_grad = True
         tot_losses=0
@@ -197,7 +197,7 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, inpu
         if epoch < 100:
             scheduler_enc.step()
             scheduler_dec.step()
-            if epoch>20:
+            if epoch>30:
                 scheduler_reg.step()
 
     models.append(model)
@@ -260,7 +260,7 @@ def main():
         outs[i] = output
 
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 50               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 70               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
@@ -269,7 +269,7 @@ def main():
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
-    torch.save(models[0].state_dict(), f"explo/models/conv_ae_net_{0}.pt")
+    torch.save(models[0].state_dict(), f"explo/models/conv_ae_net_opt.pt")
 
     try :
         plt.plot(train_losses_arr[1:], label='train')
