@@ -19,7 +19,7 @@ print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
 
 
-class CNN(nn.Module):
+class AE_CNN(nn.Module):
     '''
     ## Description
     Convolutional neural network with 2 convolutional layers and 4 fully connected layers. 
@@ -42,21 +42,27 @@ class CNN(nn.Module):
         - hidden_size2 (int) : number of neurons in the second hidden layer, default : 471
         - hidden_size3 (int) : number of neurons in the third hidden layer, default : 300
         '''
-        super(CNN, self).__init__()
-        self.conv1 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True)
-        self.conv2 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
-        self.conv3 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
-        self.bn1 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn2 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn3 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        super(AE_CNN, self).__init__()
+        self.encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True),
+                                        nn.MaxPool1d(kernel_size=5, stride=5),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.MaxPool1d(kernel_size=5, stride=5),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.MaxPool1d(kernel_size=3, stride=3))
 
-        self.deconv1 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
-        self.deconv2 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
-        self.deconv3 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
-        self.deconv4 = nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=1, dilation=1, groups=input_features, bias=True)
-        self.bn4 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn5 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-        self.bn6 = nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        self.decoder = nn.Sequential(nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Upsample(scale_factor=3, mode='linear'),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Upsample(scale_factor=5, mode='linear'),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Upsample(scale_factor=5, mode='linear'),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=1, dilation=1, groups=input_features, bias=True))
         
         self.in_pred = int(input_features*(output_features-1)/(5*5*3))
         self.regression = nn.Sequential(nn.BatchNorm1d(self.in_pred, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
@@ -75,16 +81,10 @@ class CNN(nn.Module):
                                         nn.Linear(hidden_size3, output_features))
                                         
     def encode(self, x):
-        x = F.max_pool1d(input=self.conv1(self.bn1(x)), kernel_size=5)
-        x = F.max_pool1d(input=self.conv2(self.bn2(x)), kernel_size=5)
-        x = F.max_pool1d(input=self.conv3(self.bn3(x)), kernel_size=3)
-        return x
+        return self.encoder(x)
 
     def decode(self, x):
-        x = F.upsample(input=self.bn4(self.deconv1(x)), scale_factor=3, mode='linear')
-        x = F.upsample(input=self.bn5(self.deconv2(x)), scale_factor=5, mode='linear')
-        x = F.upsample(input=self.bn6(self.deconv3(x)), scale_factor=5, mode='linear')
-        return self.deconv4(x)
+        return self.decoder(x)
 
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
         x = self.encode(x)
@@ -141,7 +141,8 @@ def train(device, learning_rates, decays, batch_sizes, nb_epochs, models, train_
             test_losses_decay = []
             for batch_size in batch_sizes :
                 n_batches = input_train.shape[0]//batch_size
-                model = CNN(input_features=len_in,output_features=len_out)
+                model = AE_CNN(input_features=len_in,output_features=len_out)
+                print(model)
                 model = model.to(device)
                 print(device)
                 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
