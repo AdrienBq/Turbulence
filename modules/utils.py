@@ -39,45 +39,6 @@ def print_one_alt(path_data,var,alt,color='RdBu_r'):
     plt.show()
 
 
-def plot_output(pred_ds,true_ds,L,z,fig_name,color='RdBu'):
-    '''
-    ## Description
-    Plot the prediction and true dataset for a given altitude
-
-    ## Parameters
-    - pred_ds (np array) : prediction dataset
-    - true_ds (np array) : true dataset
-    - L (int) : coarsening factor
-    - z (int) : altitude index
-    - color (str) : color map
-    '''
-    exp_shapex = int(512/L)
-    exp_shapey = int(512/L)
-    exp_shapez = 376
-    assert pred_ds.shape == true_ds.shape, 'prediction and true datasets have different shapes'
-    assert exp_shapex*exp_shapey == pred_ds.shape[0] and exp_shapez == pred_ds.shape[1], 'datasets do not have expected shape'
-    
-    pred_z = pred_ds[:,z].reshape((exp_shapex,exp_shapey))
-    true_z = true_ds[:,z].reshape((exp_shapex,exp_shapey))
-    
-    fig, (ax1, ax2, ax3) = plt.subplots(figsize=(16, 4), ncols=3)
-    
-    true = ax1.imshow(true_z, cmap=color, interpolation='nearest')
-    fig.colorbar(true, ax=ax1, orientation='vertical', fraction=0.046, pad=0.04)
-    ax1.set_title(f"2-D Heat Map of the true heat-flux at Altitude {z}")
-
-    pred = ax2.imshow(pred_z, cmap=color, interpolation='nearest')
-    fig.colorbar(pred, ax=ax2,orientation='vertical', fraction=0.046, pad=0.04)
-    ax2.set_title(f"2-D Heat Map of heat-flux predictions at Altitude {z}")
-    
-    diff = ax3.imshow(np.abs(true_z-pred_z), cmap=color, interpolation='nearest')
-    fig.colorbar(diff, ax=ax3, orientation='vertical', fraction=0.046, pad=0.04)
-    ax3.set_title(f"Abs difference between true and pred heat-flux")
-    
-    plt.tight_layout()
-    plt.show()
-    plt.savefig(fig_name)
-
 def plot_baseline(Directory, test_times, len_out, z, t, L, mean_out, std_out, color='RdBu_r'):
     '''
     ## Description
@@ -130,6 +91,88 @@ def plot_baseline(Directory, test_times, len_out, z, t, L, mean_out, std_out, co
     plt.savefig('explo/images/baseline_heat_flux.png')
 
     return baseline_heat_flux
+
+
+def plot_output(pred_ds,true_ds,L,z,fig_name,color='RdBu'):
+    '''
+    ## Description
+    Plot the prediction and true dataset for a given altitude
+
+    ## Parameters
+    - pred_ds (np array) : prediction dataset
+    - true_ds (np array) : true dataset
+    - L (int) : coarsening factor
+    - z (int) : altitude index
+    - color (str) : color map
+    '''
+    exp_shapex = int(512/L)
+    exp_shapey = int(512/L)
+    exp_shapez = 376
+    assert pred_ds.shape == true_ds.shape, 'prediction and true datasets have different shapes'
+    assert exp_shapex*exp_shapey == pred_ds.shape[0] and exp_shapez == pred_ds.shape[1], 'datasets do not have expected shape'
+    
+    pred_z = pred_ds[:,z].reshape((exp_shapex,exp_shapey))
+    true_z = true_ds[:,z].reshape((exp_shapex,exp_shapey))
+    
+    fig, (ax1, ax2, ax3) = plt.subplots(figsize=(16, 4), ncols=3)
+    
+    true = ax1.imshow(true_z, cmap=color, interpolation='nearest')
+    fig.colorbar(true, ax=ax1, orientation='vertical', fraction=0.046, pad=0.04)
+    ax1.set_title(f"2-D Heat Map of the true heat-flux at Altitude {z}")
+
+    pred = ax2.imshow(pred_z, cmap=color, interpolation='nearest')
+    fig.colorbar(pred, ax=ax2,orientation='vertical', fraction=0.046, pad=0.04)
+    ax2.set_title(f"2-D Heat Map of heat-flux predictions at Altitude {z}")
+    
+    diff = ax3.imshow(np.abs(true_z-pred_z), cmap=color, interpolation='nearest')
+    fig.colorbar(diff, ax=ax3, orientation='vertical', fraction=0.046, pad=0.04)
+    ax3.set_title(f"Abs difference between true and pred heat-flux")
+    
+    plt.tight_layout()
+    plt.show()
+    plt.savefig(fig_name)
+
+
+def plot_loss_div(input_ds,true_ds,model,L,fig_name):
+    exp_shapex = int(512/L)
+    exp_shapey = int(512/L)
+    exp_shapez = 376
+
+    pred_ds = model(input_ds)
+    print(pred_ds.shape)
+    
+    u_ds = input_ds[:,0,:]
+    v_ds = input_ds[:,1,:]
+
+    nb_im = pred_ds.shape[0]//(exp_shapex**2)
+
+    losses = []
+    divs = []
+
+    for i in range(nb_im):
+        for z in range(exp_shapez):
+            pred_image = pred_ds[i*exp_shapex**2:(i+1)*exp_shapex**2,z].cpu().detach().numpy().reshape((exp_shapex,exp_shapey))
+            true_image = true_ds[i*exp_shapex**2:(i+1)*exp_shapex**2,z].cpu().detach().numpy().reshape((exp_shapex,exp_shapey))
+            u_image = u_ds[i*exp_shapex**2:(i+1)*exp_shapex**2,z].cpu().detach().numpy().reshape((exp_shapex,exp_shapey))
+            v_image = v_ds[i*exp_shapex**2:(i+1)*exp_shapex**2,z].cpu().detach().numpy().reshape((exp_shapex,exp_shapey))
+
+            for x in range(1,exp_shapex-1):
+                for y in range(1,exp_shapey-1):
+                    losses.append((pred_image[x,y]-true_image[x,y])**2)
+                    u_ker = u_image[x-1:x+1,y-1:y+1]
+                    v_ker = v_image[x-1:x+1,y-1:y+1]
+                    u_sig = np.sqrt(np.var(u_ker))
+                    v_sig = np.sqrt(np.var(v_ker))
+                    u_mean = np.mean(u_ker)
+                    v_mean = np.mean(v_ker)
+                    divs.append(u_sig/u_mean + v_sig/v_mean)
+    
+    plt.plot(divs,losses)
+    plt.title('losses vs horizontal speed divergence')
+    plt.savefig(fig_name)
+    plt.show()
+
+
 
 #-------------CONCATENATE AND COARSE GRAIN-------------------------------
 
