@@ -130,7 +130,7 @@ def plot_output(pred_ds,true_ds,L,z,fig_name,color='RdBu'):
     
     plt.tight_layout()
     plt.show()
-    plt.savefig(fig_name)
+    #plt.savefig(fig_name)
 
 
 def plot_loss_div(input_ds,true_ds,model,L,fig_name):
@@ -139,8 +139,7 @@ def plot_loss_div(input_ds,true_ds,model,L,fig_name):
     exp_shapez = 376
 
     pred_ds = model(input_ds)
-    print(pred_ds.shape)
-    
+
     u_ds = input_ds[:,0,:]
     v_ds = input_ds[:,1,:]
 
@@ -163,12 +162,28 @@ def plot_loss_div(input_ds,true_ds,model,L,fig_name):
                     v_ker = v_image[x-1:x+1,y-1:y+1]
                     u_sig = np.sqrt(np.var(u_ker))
                     v_sig = np.sqrt(np.var(v_ker))
-                    u_mean = np.mean(u_ker)
-                    v_mean = np.mean(v_ker)
-                    divs.append(u_sig/u_mean + v_sig/v_mean)
+                    u_mean = np.abs(np.mean(u_ker))
+                    v_mean = np.abs(np.mean(v_ker))
+                    divs.append(u_sig + v_sig)
+    print(max(divs),min(divs))
+
+    nb_bins = 50
+    div_bins = [i*max(divs)/nb_bins for i in range(nb_bins+1)]
+    loss_bins = [[] for _ in range(nb_bins+1)]
+    for i in range(len(losses)):
+        for j in range(nb_bins):
+            if divs[i] >= div_bins[j] and divs[i] < div_bins[j+1]:
+                loss_bins[j].append(losses[i])
+    div_plot = [(i+1/2)*max(divs)/nb_bins for i in range(nb_bins)]
+    loss_plot = [np.mean(loss_bins[i]) for i in range(nb_bins)]
+    loss_plot_err = [2*np.std(loss_bins[i])/np.sqrt(len(loss_bins[i])) for i in range(nb_bins)]
+    print(loss_plot_err)
     
-    plt.plot(divs,losses)
+    plt.scatter(div_plot,loss_plot, vmin=0, vmax=0.4)
+    plt.errorbar(div_plot,loss_plot, yerr=loss_plot_err, fmt="o")
     plt.title('losses vs horizontal speed divergence')
+    plt.xlabel('horizontal speed divergence')
+    plt.ylabel('loss')
     plt.savefig(fig_name)
     plt.show()
 
