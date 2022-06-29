@@ -134,6 +134,17 @@ def plot_output(pred_ds,true_ds,L,z,fig_name,color='RdBu'):
 
 
 def plot_loss_div(input_ds,true_ds,model,L,fig_name):
+    '''
+    # Description
+    Plot the pixel-wise prediction error versus the horizontal velocity divergence around said pixel.
+
+    # Parameters
+    - input_ds (np array) : prediction dataset
+    - true_ds (np array) : true value dataset
+    - model (torch.nn) : model used for prediction
+    - L (int) : coarsening factor
+    - fig_name (str) : name of the figure to save
+    '''
     exp_shapex = int(512/L)
     exp_shapey = int(512/L)
     exp_shapez = 376
@@ -533,3 +544,153 @@ def lrp(model,input,sample=200,z=0,one_alt=False):
     else:
         plot_ds = R[0]
     return plot_ds
+
+
+
+#-----------------------SUPER-RESOLUTION VERTICALE----------------------------------------------------
+
+def interpolation_knn(input,N_output,max_height,n_neighboors):
+    '''
+    # Description
+    Interpolation of the input data using the K nearest neighboors.
+
+    # Parameters
+    - input (np.array) : input data
+    - N_output (int) : number of output points  
+    - max_height (int) : maximum height of the input and output data
+    - n_neighboors (int) : number of neighboors to use for the interpolation
+    '''
+    eps = 1e-3
+    N_input = input.shape[0]
+    z_inputs = [i*max_height/(N_input-1) for i in range(N_input)]
+    out = np.zeros(N_output)
+    for i in range(N_output):
+        z=i*max_height/(N_output-1)
+        distances = {j:np.abs(z-z_inputs[j]) for j in range(N_input)}
+        distances = sorted(distances.items(), key=lambda x: x[1])
+        nearest = [distances[j] for j in range(n_neighboors)]
+        out[i] = np.sum(input[int(nearest[j][0])]/(nearest[j][1]+eps) for j in range(n_neighboors))/np.sum(1/(nearest[j][1]+eps) for j in range(n_neighboors))
+    return out
+
+def interpolation_linear(input,N_output,max_height):
+    '''
+    # Description
+    Interpolation of the input data using a linear interpolation.
+
+    # Parameters
+    - input (np.array) : input data
+    - N_output (int) : number of output points
+    - max_height (int) : maximum height of the input and output data
+    '''
+    N_input = input.shape[0]
+    z_inputs = [i*max_height/(N_input-1) for i in range(N_input)]
+    out = np.zeros(N_output)
+    for i in range(N_output):
+        if i==0:
+            out[i] = input[0]
+        elif i==N_output-1:
+            out[i] = input[-1]
+        else:
+            z=i*max_height/(N_output-1)
+            j = 0
+            while z_inputs[j]<z:
+                j+=1
+            out[i] = input[j-1]+(z-z_inputs[j-1])*(input[j]-input[j-1])/(z_inputs[j]-z_inputs[j-1])
+    return out
+
+def interpolation_cubic(input,N_output,max_height):
+    '''
+    # Description
+    Interpolation of the input data using a cubic interpolation.
+
+    # Parameters
+    - input (np.array) : input data
+    - N_output (int) : number of output points
+    - max_height (int) : maximum height of the input and output data
+    '''
+    N_input = input.shape[0]
+    z_inputs = [i*max_height/(N_input-1) for i in range(N_input)]
+    out = np.zeros(N_output)
+    C_func=[]
+
+    for i in range(1,N_input):
+        A = np.array([[1,z_inputs[i-1],z_inputs[i-1]**2,z_inputs[i-1]**3],
+                        [1,z_inputs[i],z_inputs[i]**2,z_inputs[i]**3],
+                        [0,1,2*z_inputs[i-1],3*z_inputs[i-1]**2],
+                        [0,1,2*z_inputs[i],3*z_inputs[i]**2]])
+        if i==1:
+            B = np.array([input[i-1],input[i],(input[i]-input[i-1])/(z_inputs[i]-z_inputs[i-1]),(input[i]-input[i-1])/(z_inputs[i+1]-z_inputs[i-1])])
+        elif i==N_input-1:
+            B = np.array([input[i-1],input[i],(input[i]-input[i-1])/(z_inputs[i]-z_inputs[i-1]),(input[i]-input[i-1])/(z_inputs[i]-z_inputs[i-2])])
+        else:
+            B = np.array([input[i-1],input[i],(input[i]-input[i-1])/(z_inputs[i]-z_inputs[i-1]),(input[i]-input[i-1])/(z_inputs[i+1]-z_inputs[i-1])])
+        X = np.linalg.solve(A,B)
+        C_func.append(X)
+
+    for i in range(N_output):
+        z=i*max_height/(N_output-1)
+        j = 0
+        while z_inputs[j]<z:
+            j+=1
+        if j==0:
+            out[i] = input[0]
+        else :
+            out[i] = C_func[j-1][0]+C_func[j-1][1]*z+C_func[j-1][2]*z**2+C_func[j-1][3]*z**3
+    return out
+
+
+def interpolation_CNN(input,N_output,max_height,model):
+    '''
+    # Description
+    Interpolation of the input data using a CNN.
+
+    # Parameters
+    - input (np.array) : input data
+    - N_output (int) : number of output points
+    - max_height (int) : maximum height of the input and output data
+    - model (torch.nn) : CNN model
+    '''
+    out = model(input)
+    return out
+
+def interpolation_GNN(input,N_output,max_height,model):
+    '''
+    # Description
+    Interpolation of the input data using a GNN.
+
+    # Parameters
+    - input (np.array) : input data
+    - N_output (int) : number of output points
+    - max_height (int) : maximum height of the input and output data
+    - model (torch.nn) : GNN model
+    '''
+    out = model(input)
+    return out
+
+
+def interpolation(input,method,max_height,model=None,No=376,n_neighboors=5):
+    '''
+    # Description
+    Interpolation of the input dataset to map the input to a higher resolution of No points.
+    Needs the lowest point to be at 0m and the highest point to be at the same alt as No-th point of our training dataset.
+    We assume that the points in the input data are equidistant vertically.
+    CNN and GNN methods work only for inputs of length 188, 94 or 47.
+
+    # Parameters
+    - input (np.array) : vertical vector of unknown size to map on a 376 points vertical vector
+    - method (str) : method of interpolation : 'knn' ,'linear', 'cubic', 'CNN' or 'GNN'
+    - No (int) : number of points to map the input on, default is 376
+    '''
+    if method == 'knn':
+        return interpolation_knn(input,No,max_height,n_neighboors)
+    elif method == 'linear':
+        return interpolation_linear(input,No,max_height)
+    elif method == 'cubic':
+        return interpolation_cubic(input,No,max_height)
+    elif method == 'CNN':
+        return interpolation_CNN(input,No,max_height,model)
+    elif method == 'GNN':
+        return interpolation_GNN(input,No,max_height,model)
+    else:
+        print('Method not implemented')
+        return None
