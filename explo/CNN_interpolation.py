@@ -94,7 +94,7 @@ def test(model, device, coarse_input_test, input_test):
     coarse_test = torch.from_numpy(coarse_test).to(device)
     output_pred = model(coarse_test)
     # compute loss
-    test_loss = F.mse_loss(output_pred, input_test.to(device), reduction='mean')
+    test_loss = F.mse_loss(output_pred, torch.from_numpy(input_test).to(device), reduction='mean')
     tot_loss = test_loss
     return tot_loss.item()
 
