@@ -549,7 +549,7 @@ def lrp(model,input,sample=200,z=0,one_alt=False):
 
 #-----------------------SUPER-RESOLUTION VERTICALE----------------------------------------------------
 
-def interpolation_knn(input,N_output,max_height,n_neighboors):
+def interpolation_knn(input,N_output,max_in_height,max_out_height,n_neighboors):
     '''
     # Description
     Interpolation of the input data using the K nearest neighboors.
@@ -562,17 +562,17 @@ def interpolation_knn(input,N_output,max_height,n_neighboors):
     '''
     eps = 1e-3
     N_input = input.shape[0]
-    z_inputs = [i*max_height/(N_input-1) for i in range(N_input)]
+    z_inputs = [i*max_in_height/(N_input-1) for i in range(N_input)]
     out = np.zeros(N_output)
     for i in range(N_output):
-        z=i*max_height/(N_output-1)
+        z=i*max_out_height/(N_output-1)
         distances = {j:np.abs(z-z_inputs[j]) for j in range(N_input)}
         distances = sorted(distances.items(), key=lambda x: x[1])
         nearest = [distances[j] for j in range(n_neighboors)]
         out[i] = np.sum(input[int(nearest[j][0])]/(nearest[j][1]+eps) for j in range(n_neighboors))/np.sum(1/(nearest[j][1]+eps) for j in range(n_neighboors))
     return out
 
-def interpolation_linear(input,N_output,max_height):
+def interpolation_linear(input,N_output,max_in_height=1,max_out_height=1):
     '''
     # Description
     Interpolation of the input data using a linear interpolation.
@@ -583,22 +583,25 @@ def interpolation_linear(input,N_output,max_height):
     - max_height (int) : maximum height of the input and output data
     '''
     N_input = input.shape[0]
-    z_inputs = [i*max_height/(N_input-1) for i in range(N_input)]
+    z_inputs = [i*max_in_height/(N_input-1) for i in range(N_input)]
     out = np.zeros(N_output)
     for i in range(N_output):
         if i==0:
             out[i] = input[0]
-        elif i==N_output-1:
-            out[i] = input[-1]
         else:
-            z=i*max_height/(N_output-1)
+            z=i*max_out_height/(N_output-1)
             j = 0
             while z_inputs[j]<z:
                 j+=1
-            out[i] = input[j-1]+(z-z_inputs[j-1])*(input[j]-input[j-1])/(z_inputs[j]-z_inputs[j-1])
+                if j==N_input:
+                    break
+            if j==N_input:
+                out[i] = input[-1]
+            else:
+                out[i] = input[j-1]+(z-z_inputs[j-1])*(input[j]-input[j-1])/(z_inputs[j]-z_inputs[j-1])
     return out
 
-def interpolation_cubic(input,N_output,max_height):
+def interpolation_cubic(input,N_output,max_in_height=1,max_out_height=1):
     '''
     # Description
     Interpolation of the input data using a cubic interpolation.
@@ -609,7 +612,7 @@ def interpolation_cubic(input,N_output,max_height):
     - max_height (int) : maximum height of the input and output data
     '''
     N_input = input.shape[0]
-    z_inputs = [i*max_height/(N_input-1) for i in range(N_input)]
+    z_inputs = [i*max_in_height/(N_input-1) for i in range(N_input)]
     out = np.zeros(N_output)
     C_func=[]
 
@@ -628,18 +631,22 @@ def interpolation_cubic(input,N_output,max_height):
         C_func.append(X)
 
     for i in range(N_output):
-        z=i*max_height/(N_output-1)
+        z=i*max_out_height/(N_output-1)
         j = 0
         while z_inputs[j]<z:
             j+=1
-        if j==0:
+            if j==N_input:
+                break
+        if j==N_input:
+            out[i] = input[-1]
+        elif j==0:
             out[i] = input[0]
         else :
             out[i] = C_func[j-1][0]+C_func[j-1][1]*z+C_func[j-1][2]*z**2+C_func[j-1][3]*z**3
     return out
 
 
-def interpolation_CNN(input,N_output,max_height,model):
+def interpolation_CNN(input,N_output,max_in_height,max_out_height,model):
     '''
     # Description
     Interpolation of the input data using a CNN.
@@ -650,10 +657,18 @@ def interpolation_CNN(input,N_output,max_height,model):
     - max_height (int) : maximum height of the input and output data
     - model (torch.nn) : CNN model
     '''
-    out = model(input)
-    return out
+    N_input = input.shape[0]
+    '''if N_input==64:
+        model = ...
+    elif N_input==128:
+        model = ...
+    elif N_input==256:
+        model = ...
+    
+    out = model(input)'''
+    return 
 
-def interpolation_GNN(input,N_output,max_height,model):
+def interpolation_GNN(input,N_output,max_in_height,max_out_height):
     '''
     # Description
     Interpolation of the input data using a GNN.
@@ -664,33 +679,49 @@ def interpolation_GNN(input,N_output,max_height,model):
     - max_height (int) : maximum height of the input and output data
     - model (torch.nn) : GNN model
     '''
-    out = model(input)
-    return out
+    N_input = input.shape[0]
+    '''if N_input==64:
+        model = ...
+    elif N_input==128:
+        model = ...
+    elif N_input==256:
+        model = ...
+    
+    out = model(input)'''
+    return 
 
 
-def interpolation(input,method,max_height,model=None,No=376,n_neighboors=5):
+def interpolation(input,method,max_in_height=1,max_out_height=1,model=None,No=376,n_neighboors=5):
     '''
     # Description
     Interpolation of the input dataset to map the input to a higher resolution of No points.
-    Needs the lowest point to be at 0m and the highest point to be at the same alt as No-th point of our training dataset.
+    Needs the lowest point to be at 0m.
     We assume that the points in the input data are equidistant vertically.
-    CNN and GNN methods work only for inputs of length 188, 94 or 47.
+    CNN and GNN methods work only for inputs of length 256, 128 or 64. Therefore if the input length is different, we interpolate on the closest length supported.
 
     # Parameters
     - input (np.array) : vertical vector of unknown size to map on a 376 points vertical vector
     - method (str) : method of interpolation : 'knn' ,'linear', 'cubic', 'CNN' or 'GNN'
     - No (int) : number of points to map the input on, default is 376
     '''
+    if max_in_height > max_out_height:
+        nb_in = input.shape[0]
+        frac_to_keep = max_out_height/max_in_height
+        input = input[:np.ceil(nb_in*frac_to_keep)]
+        max_in_height = np.ceil(max_in_height*frac_to_keep)
+    
     if method == 'knn':
-        return interpolation_knn(input,No,max_height,n_neighboors)
+        return interpolation_knn(input,No,max_in_height,max_out_height,n_neighboors)
     elif method == 'linear':
-        return interpolation_linear(input,No,max_height)
+        return interpolation_linear(input,No,max_in_height,max_out_height)
     elif method == 'cubic':
-        return interpolation_cubic(input,No,max_height)
+        return interpolation_cubic(input,No,max_in_height,max_out_height)
     elif method == 'CNN':
-        return interpolation_CNN(input,No,max_height,model)
+        return interpolation_CNN(input,No,max_in_height,max_out_height,model)
     elif method == 'GNN':
-        return interpolation_GNN(input,No,max_height,model)
+        print('Method not yet implemented')
+        #return interpolation_GNN(input,No,max_in_height,max_out_height,model)
+        return None
     else:
         print('Method not implemented')
         return None
