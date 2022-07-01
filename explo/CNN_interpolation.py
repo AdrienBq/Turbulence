@@ -136,8 +136,9 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, coar
         model.train()
         tot_losses=0
         indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
-        for i_batch in indexes_arr:
-            print('batch')
+        print(indexes_arr.shape[0])
+        for idx in trange(indexes_arr.shape[0]):
+            i_batch = indexes_arr[idx,:]
             coarse_input_batch = coarse_input_train[i_batch,:,:]
             coarse_interp = np.zeros((batch_size, coarse_input_train.shape[1], 256))
             for var in range(coarse_input_batch.shape[1]):
