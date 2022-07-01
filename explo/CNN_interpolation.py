@@ -94,7 +94,7 @@ def test(model, device, coarse_input_test, input_test):
     coarse_test = torch.from_numpy(coarse_test).to(device)
     output_pred = model(coarse_test)
     # compute loss
-    test_loss = F.mse_loss(output_pred, torch.from_numpy(input_test).to(device), reduction='mean')
+    test_loss = F.mse_loss(output_pred, input_test, reduction='mean')
     tot_loss = test_loss
     return tot_loss.item()
 
@@ -117,7 +117,7 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, coar
     - len_in (int) : the length of the input data (here it's the number of input channels of the first convolutional layer)
     - len_out (int) : the length of the output data
     '''
-    
+    print(input_test.type())
     n_batches = input_train.shape[0]//batch_size
     model = CNN(input_features=len_in,output_features=6*len_out)
     model = model.to(device)
