@@ -94,7 +94,7 @@ def test(model, device, coarse_input_test, input_test):
     coarse_test = torch.from_numpy(coarse_test).to(device)
     output_pred = model(coarse_test)
     # compute loss
-    test_loss = F.mse_loss(output_pred, input_test, reduction='mean')
+    test_loss = F.mse_loss(output_pred, input_test.to(device), reduction='mean')
     return test_loss.item()
 
 def train(device, batch_size, nb_epochs, models, train_losses, test_losses, coarse_input_train, input_train, coarse_input_test, input_test, len_in, len_out):
@@ -135,7 +135,6 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, coar
         model.train()
         tot_losses=0
         indexes_arr = np.random.permutation(input_train.shape[0]).reshape(-1, batch_size)
-        print(indexes_arr.shape[0])
         for idx in trange(indexes_arr.shape[0]):
             i_batch = indexes_arr[idx,:]
             coarse_input_batch = coarse_input_train[i_batch,:,:]
