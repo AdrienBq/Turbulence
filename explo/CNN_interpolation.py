@@ -163,7 +163,7 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, coar
         test_losses.append(test_loss)
 
         if epoch%10 == 0:
-            print('ae_loss :', test_loss[1], 'pred_loss :', test_loss[2])
+            print('loss :', test_loss)
 
         if epoch < 100:
             scheduler_conv.step()
