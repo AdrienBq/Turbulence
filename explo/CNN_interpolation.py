@@ -234,7 +234,7 @@ def main():
     test_losses=[]
     models=[]
 
-    train(device, batch_size, nb_epochs, models, train_losses, test_losses, coarses[0], ins[0], ins[1], coarses[1], n_in_features, nz)
+    train(device, batch_size, nb_epochs, models, train_losses, test_losses, coarses[0], ins[0], coarses[1], ins[1], n_in_features, nz)
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
