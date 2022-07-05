@@ -175,7 +175,7 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    interp_method = ["linear", "cubic", "knn", 'cnn']
+    interp_method = ['cnn']
     net_params = [n_in_features, len_out]
     losses = []
     net_preds = []
@@ -187,11 +187,11 @@ def main():
             interp_net.load_state_dict(torch.load('explo/models/cnn_interp_net.pt',map_location=torch.device('cpu')))
             interp_net.to(device)
             interp_net.eval()
-            coarse_test = torch.zeros((coarses[1].shape[0], coarses[1].shape[1], 256))
+            coarse_test = np.zeros((coarses[1].shape[0], coarses[1].shape[1], 256))
             for var in range(coarses[1].shape[1]):
                 for sample in range(coarses[1].shape[0]):
                     coarse_test[sample,var,:] = utils.interpolation_linear(coarses[1][sample,var,:], N_output=256)
-            coarse_test = coarse_test.to(device)
+            coarse_test = torch.from_numpy(coarse_test).to(device)
             input_pred = interp_net(coarse_test)
 
         elif method == 'knn':
