@@ -227,6 +227,7 @@ def main():
 
         # prediction
         print(input_pred.shape)
+        input_pred = input_pred.float()
         output_pred = model_pred(input_pred)
         net_preds.append(output_pred)
 
