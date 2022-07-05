@@ -549,7 +549,7 @@ def lrp(model,input,sample=200,z=0,one_alt=False):
 
 #-----------------------SUPER-RESOLUTION VERTICALE----------------------------------------------------
 
-def interpolation_knn(input,N_output,max_in_height,max_out_height,n_neighboors):
+def interpolation_knn(input,N_output,max_in_height=1,max_out_height=1,n_neighboors=5):
     '''
     # Description
     Interpolation of the input data using the K nearest neighboors.
