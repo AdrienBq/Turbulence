@@ -130,7 +130,7 @@ def plot_output(pred_ds,true_ds,L,z,fig_name,color='RdBu'):
     
     plt.tight_layout()
     plt.show()
-    #plt.savefig(fig_name)
+    plt.savefig(fig_name)
 
 
 def plot_loss_div(input_ds,true_ds,model,L,fig_name):
@@ -584,7 +584,7 @@ def interpolation_linear(input,N_output,max_in_height=1,max_out_height=1):
     '''
     N_input = input.shape[0]
     z_inputs = [i*max_in_height/(N_input-1) for i in range(N_input)]
-    out = np.zeros(N_output)
+    out = torch.zeros(N_output)
     for i in range(N_output):
         if i==0:
             out[i] = input[0]
