@@ -219,7 +219,7 @@ def main():
             print('interpolation method not found')
             exit()
         
-        model_pred = AE_CNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
+        model_pred = AE_CNN(input_features=net_params[0] ,output_features=net_params[1])
         model_pred.load_state_dict(torch.load('explo/models/conv_ae_net.pt', map_location=torch.device('cpu'))) 
 
         model_pred.to(device)
