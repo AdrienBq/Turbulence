@@ -175,7 +175,7 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    interp_method = ['cnn']
+    interp_method = ["linear", "cubic", "knn", 'cnn']
     net_params = [n_in_features, len_out]
     losses = []
     net_preds = []
