@@ -102,9 +102,9 @@ class AE_CNN(nn.Module):
         x = torch.flatten(x, start_dim=1,end_dim=-1)
         return self.mean(self.regression(x)), self.logvar(self.regression(x))
 
-    def loss(mu, logvar, x):
-        var = torch.exp(logvar)
-        return torch.sum(logvar + torch.divide(torch.mul(mu-x,mu-x)/(2*torch.mul(var,var))))
+def custom_loss(mu, logvar, obj):
+    var = torch.exp(logvar)
+    return torch.sum(logvar + torch.divide(torch.mul(mu-obj,mu-obj)/(2*torch.mul(var,var))))
 
 def test(model, device, input_test, output_test):
     '''
@@ -123,7 +123,7 @@ def test(model, device, input_test, output_test):
     output_pred = model(input_test.to(device))
     # compute loss
     ae_loss = F.mse_loss(ae_output, input_test.to(device))
-    test_loss = model.loss(output_pred[0], output_test.to(device), reduction='mean')
+    test_loss = custom_loss(output_pred[0], output_test.to(device), reduction='mean')
     tot_loss = ae_loss + test_loss
     return tot_loss.item(), ae_loss.item(), test_loss.item()
 
@@ -191,7 +191,7 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, inpu
             mu,logvar = model(input_batch)
             # compute loss
             ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
-            pred_loss = model.loss(mu,logvar,output_batch)
+            pred_loss = custom_loss(mu,logvar,output_batch)
             loss = ae_loss + pred_loss
             tot_losses += pred_loss.item()
             # backward pass
