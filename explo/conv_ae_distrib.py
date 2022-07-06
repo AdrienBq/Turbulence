@@ -104,7 +104,7 @@ class AE_CNN(nn.Module):
 
 def custom_loss(mu, logvar, obj):
     var = torch.exp(logvar)
-    return torch.sum(logvar + torch.divide(torch.mul(mu-obj,mu-obj)/(2*torch.mul(var,var))))
+    return torch.sum(logvar + torch.divide(torch.mul(mu-obj,mu-obj)/(torch.mul(torch.mul(var,var),2))))
 
 def test(model, device, input_test, output_test):
     '''
