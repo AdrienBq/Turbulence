@@ -125,7 +125,7 @@ def test(model, device, input_test, output_test):
     output_pred = model(input_test.to(device))
     # compute loss
     ae_loss = F.mse_loss(ae_output, input_test.to(device))
-    test_loss = custom_loss(output_pred[0], output_test.to(device), reduction='mean')
+    test_loss = custom_loss(output_pred[0], output_pred[1], output_test.to(device))
     tot_loss = ae_loss + test_loss
     return tot_loss.item(), ae_loss.item(), test_loss.item()
 
