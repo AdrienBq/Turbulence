@@ -189,21 +189,24 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, inpu
             optimizer_reg.zero_grad()
             optimizer_mean.zero_grad()
             optimizer_logvar.zero_grad()
+
             # forward pass
             output_ae = model.decode(model.encode(input_batch))
             mu,logvar = model(input_batch)
+            
             # compute loss
             ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
             pred_loss = custom_loss(mu,logvar,output_batch)
             loss = ae_loss + pred_loss
             tot_losses += pred_loss.item()
+
             # backward pass
             loss.backward()
             optimizer_enc.step()
             optimizer_dec.step()
-            optimizer_reg.step()
             optimizer_mean.step()
             optimizer_logvar.step()
+            optimizer_reg.step()
 
         train_losses.append(tot_losses/n_batches)     # loss moyenne sur tous les batchs 
         test_loss = test(model, device, input_test, output_test)
@@ -216,9 +219,9 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, inpu
             scheduler_enc.step()
             scheduler_dec.step()
             if epoch>30:
-                scheduler_reg.step()
                 scheduler_mean.step()
                 scheduler_logvar.step()
+                scheduler_reg.step()
 
     models.append(model)
     print('Model : lr_enc [{}], decay_enc [{:.4f}], lr_dec[{}], decay_dec [{:.4f}], lr_reg [{}], decay_reg [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(lr_enc, decay_enc, lr_dec, decay_dec, lr_reg, decay_reg, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][2]))
