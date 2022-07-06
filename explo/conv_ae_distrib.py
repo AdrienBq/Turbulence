@@ -125,9 +125,10 @@ def test(model, device, input_test, output_test):
     output_pred = model(input_test.to(device))
     # compute loss
     ae_loss = F.mse_loss(ae_output, input_test.to(device))
-    test_loss = custom_loss(output_pred[0], output_pred[1], output_test.to(device))
+    loglik, = custom_loss(output_pred[0], output_pred[1], output_test.to(device))
+    test_loss = F.mse_loss(output_pred[0], output_test.to(device), reduction='mean')
     tot_loss = ae_loss + test_loss
-    return tot_loss.item(), ae_loss.item(), test_loss.item()
+    return tot_loss.item(), ae_loss.item(), loglik.item(), test_loss.item()
 
 def train(device, batch_size, nb_epochs, models, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
     '''
@@ -209,7 +210,7 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, inpu
         test_losses.append(test_loss)
 
         if epoch%10 == 0:
-            print('ae_loss :', test_loss[1], 'pred_loss :', test_loss[2])
+            print('ae_loss :', test_loss[1], 'log-likelihood :', test_loss[2], 'pred_loss :', test_loss[3])
 
         if epoch < 100:
             scheduler_enc.step()
