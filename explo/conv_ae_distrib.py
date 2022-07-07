@@ -24,6 +24,7 @@ class AE_CNN(nn.Module):
     ## Description
     Double neural network combining an AE with a simple feedforward network.
     The AE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
+    The network outputs a mean and a variance instead of a single value to model the incertainty of the prediction.
     The convolutional auto_encoder network with 3 convolutional layers for the encoder and 4 for the decoder. 
     Latent space dim is 6*5=30.
     Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
@@ -34,6 +35,7 @@ class AE_CNN(nn.Module):
         ## Description
         Double neural network combining an AE with a simple feedforward network.
         The AE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
+        The network outputs a mean and a variance instead of a single value to model the incertainty of the prediction.
         The convolutional auto_encoder network with 3 convolutional layers for the encoder and 4 for the decoder. 
         Latent space dim is 6*5=30.
         Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
@@ -46,6 +48,7 @@ class AE_CNN(nn.Module):
         - drop_prob1 (float) : dropout probability for the first hidden layer of the feedforward net, default : 0.301
         - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.121
         - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.125
+        - drop_prob4 (float) : dropout probability for the fourth hidden layer, default : 0.125
         - hidden_size1 (int) : number of neurons in the first hidden layer, default : 288
         - hidden_size2 (int) : number of neurons in the second hidden layer, default : 471
         - hidden_size3 (int) : number of neurons in the third hidden layer, default : 300

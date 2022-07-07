@@ -99,15 +99,24 @@ def test(model, device, input_test, output_test):
 def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
 
     n_batches = input_train.shape[0]//batch_size
-    model = AE_CNN(input_features=len_in,output_features=len_out)
+    drop_prob1=trial.suggest_uniform('drop_prob1', 0.0, 0.5)
+    drop_prob2=trial.suggest_uniform('drop_prob2', 0.0, 0.5)
+    drop_prob3=trial.suggest_uniform('drop_prob3', 0.0, 0.5)
+    drop_prob4=trial.suggest_uniform('drop_prob4', 0.0, 0.5)
+    hidden_size1=trial.suggest_int('hidden_size1', 100, 500)
+    hidden_size2=trial.suggest_int('hidden_size2', 100, 500)
+    hidden_size3=trial.suggest_int('hidden_size3', 100, 500)
+    
+    model = AE_CNN(input_features=len_in,output_features=len_out,drop_prob1=drop_prob1,drop_prob2=drop_prob2,drop_prob3=drop_prob3,drop_prob4=drop_prob4,hidden_size1=hidden_size1,hidden_size2=hidden_size2,hidden_size3=hidden_size3).to(device)
     model = model.to(device)
 
-    lr_enc = 5.03*1e-3
-    decay_enc = 0.909
-    lr_dec = 5.96*1e-3
-    decay_dec = 0.968
-    lr_reg = 1.09*1e-3 
-    decay_reg = 0.933
+
+    lr_enc = trial.suggest_float("lr_enc", 1e-5, 1e-2, log=True)
+    decay_enc = trial.suggest_float("decay_enc", 0.9, 0.99,)
+    lr_dec = trial.suggest_float("lr_dec", 1e-5, 1e-2, log=True)
+    decay_dec = trial.suggest_float("decay_dec", 0.9, 0.99,)
+    lr_reg = trial.suggest_float("lr_reg", 1e-5, 1e-2, log=True)
+    decay_reg = trial.suggest_float("decay_reg", 0.9, 0.99,)
 
     optimizer_enc = torch.optim.Adam(model.encoder.parameters(), lr=lr_enc)
     scheduler_enc = torch.optim.lr_scheduler.ExponentialLR(optimizer_enc, decay_enc, last_epoch= -1)
