@@ -227,7 +227,7 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, inpu
                 scheduler_reg.step()
 
     models.append(model)
-    print('Model : lr_enc [{}], decay_enc [{:.4f}], lr_dec[{}], decay_dec [{:.4f}], lr_reg [{}], decay_reg [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(lr_enc, decay_enc, lr_dec, decay_dec, lr_reg, decay_reg, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][2]))
+    print('Model : lr_enc [{}], decay_enc [{:.4f}], lr_dec[{}], decay_dec [{:.4f}], lr_reg [{}], decay_reg [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(lr_enc, decay_enc, lr_dec, decay_dec, lr_reg, decay_reg, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
                 
 
 
