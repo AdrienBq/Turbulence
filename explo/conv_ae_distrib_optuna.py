@@ -175,7 +175,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
         if epoch < 100:
             scheduler_enc.step()
             scheduler_dec.step()
-            if epoch>20:
+            if epoch>30:
                 scheduler_mean.step()
                 scheduler_logvar.step()
                 scheduler_reg.step()
@@ -239,7 +239,7 @@ def objective(trial):
         outs[i] = output
 
     batch_size = 32             
-    nb_epochs = 50      
+    nb_epochs = 70      
     train_losses=[]
     test_losses=[]
 
@@ -248,12 +248,12 @@ def objective(trial):
 
 if __name__ == '__main__':
 
-    sampler = optuna.samplers.TPESampler()
+    sampler = optuna.samplers.CmaEsSampler(restart_strategy='ipop',inc_popsize=1)
     pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
     print('using cuda : ', torch.cuda.is_available())
-    study.optimize(objective, n_trials=50, timeout=10800)
+    study.optimize(objective, n_trials=150, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])

@@ -289,7 +289,7 @@ class AE_CNN(nn.Module):
         return self.regression(x)
 
 class AE_CNN_D(nn.Module):
-    def __init__(self, input_features, output_features, drop_prob1=0.301, drop_prob2=0.121, drop_prob3=0.125, drop_prob4=0.125, hidden_size1=288, hidden_size2=471, hidden_size3=300):
+    def __init__(self, input_features, output_features, drop_prob1=0.053, drop_prob2=0.009, drop_prob3=0.094, drop_prob4=0.209, hidden_size1=117, hidden_size2=458, hidden_size3=255):
         super(AE_CNN_D, self).__init__()
         self.encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True),
