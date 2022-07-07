@@ -30,7 +30,7 @@ class AE_CNN(nn.Module):
     Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
     Feedforward net has 4 fully connected layers using batchnorm, dropout and ReLU activation.
     '''
-    def __init__(self, input_features, output_features, drop_prob1=0.301, drop_prob2=0.121, drop_prob3=0.125, drop_prob4=0.125, hidden_size1=288, hidden_size2=471, hidden_size3=300):
+    def __init__(self, input_features, output_features, drop_prob1=0.053, drop_prob2=0.009, drop_prob3=0.094, drop_prob4=0.209, hidden_size1=117, hidden_size2=458, hidden_size3=255):
         '''
         ## Description
         Double neural network combining an AE with a simple feedforward network.
@@ -45,13 +45,13 @@ class AE_CNN(nn.Module):
         ## Parameters
         - input_features (int) : number of input features (number of input channels of the first convolutional layer)
         - output_features (int) : number of output features (size of the output of the last linear layer)
-        - drop_prob1 (float) : dropout probability for the first hidden layer of the feedforward net, default : 0.301
-        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.121
-        - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.125
-        - drop_prob4 (float) : dropout probability for the fourth hidden layer, default : 0.125
-        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 288
-        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 471
-        - hidden_size3 (int) : number of neurons in the third hidden layer, default : 300
+        - drop_prob1 (float) : dropout probability for the first hidden layer of the feedforward net, default : 0.053
+        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.009
+        - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.094
+        - drop_prob4 (float) : dropout probability for the fourth hidden layer, default : 0.209 
+        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 227 
+        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 458
+        - hidden_size3 (int) : number of neurons in the third hidden layer, default : 255
         '''
         super(AE_CNN, self).__init__()
         self.encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
@@ -157,12 +157,12 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, inpu
     model = AE_CNN(input_features=len_in,output_features=len_out)
     model = model.to(device)
 
-    lr_enc = 5.03*1e-3
-    decay_enc = 0.909
-    lr_dec = 5.96*1e-3
-    decay_dec = 0.968
-    lr_reg = 1.09*1e-3 
-    decay_reg = 0.933
+    lr_enc = 3.47*1e-4
+    decay_enc = 0.942
+    lr_dec = 2.42*1e-3
+    decay_dec = 0.972
+    lr_reg = 1.34*1e-3 
+    decay_reg = 0.937
 
     optimizer_enc = torch.optim.Adam(model.encoder.parameters(), lr=lr_enc)
     scheduler_enc = torch.optim.lr_scheduler.ExponentialLR(optimizer_enc, decay_enc, last_epoch= -1)
@@ -286,7 +286,7 @@ def main():
         outs[i] = output
 
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 70               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 100               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
     models=[]
