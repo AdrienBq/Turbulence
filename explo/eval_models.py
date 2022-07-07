@@ -480,7 +480,7 @@ def main():
         losses.append(loss)
         print("{} loss : {}".format(name, loss))
 
-    for i in range(len(model_names)) :
+    '''for i in range(len(model_names)) :
         pred_ds = net_preds[i][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
         utils.plot_output(pred_ds,true_ds,L,z,'explo/images/eval/{}_net.png'.format(model_names[i]), color='RdBu_r')
 
@@ -495,7 +495,7 @@ def main():
     model_div.load_state_dict(torch.load('explo/models/conv_ae_net.pt', map_location=torch.device('cpu')))
 
     utils.plot_loss_div(input_pred, outs[1], model_div, L,'explo/images/eval/loss_div.png')
-
+    '''
 
     #----------------L COMPARISON---------------
 

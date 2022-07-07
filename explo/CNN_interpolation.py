@@ -26,7 +26,7 @@ class CNN(nn.Module):
     Convolutional neural network with 2 convolutional layers and 2 fully connected layers. 
     Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
     '''
-    def __init__(self, input_features, output_features=6*376, drop_prob1=0.301, drop_prob2=0.121, hidden_size1=288, hidden_size2=471):
+    def __init__(self, input_features, output_features=6*376, drop_prob1=0.051, drop_prob2=0.465, hidden_size1=345, hidden_size2=350):
         '''
         ## Description
         Convolutional neural network with 2 convolutional layers and 4 fully connected layers. 
@@ -36,12 +36,10 @@ class CNN(nn.Module):
         ## Parameters
         - input_features (int) : number of input features (number of input channels (number of variables))
         - output_features (int) : number of output features (size of the output of the last linear layer), default : 376
-        - drop_prob1 (float) : dropout probability for the first hidden layer, default : 0.301
-        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.121
-        - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.125
-        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 288
-        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 471
-        - hidden_size3 (int) : number of neurons in the third hidden layer, default : 300
+        - drop_prob1 (float) : dropout probability for the first hidden layer, default : 0.051
+        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.465
+        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 345
+        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 350
         '''
         super(CNN, self).__init__()
         self.conv = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
@@ -116,15 +114,14 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, coar
     - len_in (int) : the length of the input data (here it's the number of input channels of the first convolutional layer)
     - len_out (int) : the length of the output data
     '''
-    print(type(input_test))
     n_batches = input_train.shape[0]//batch_size
     model = CNN(input_features=len_in,output_features=6*len_out)
     model = model.to(device)
 
-    lr_conv = 5.03*1e-3
-    decay_conv = 0.909
-    lr_reg = 1.09*1e-3 
-    decay_reg = 0.933
+    lr_conv = 1.10*1e-4
+    decay_conv = 0.978
+    lr_reg = 6.37*1e-3 
+    decay_reg = 0.909
 
     optimizer_conv = torch.optim.Adam(model.conv.parameters(), lr=lr_conv)
     scheduler_conv = torch.optim.lr_scheduler.ExponentialLR(optimizer_conv, decay_conv, last_epoch= -1)
