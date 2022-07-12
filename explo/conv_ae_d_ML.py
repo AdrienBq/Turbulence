@@ -177,7 +177,6 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
 
     for epoch in trange(nb_epochs, leave=False):
-        meta_model.train()
         tot_losses=0
         tot_meta_losses=0
         indexes = []
@@ -187,6 +186,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
         #outer loop :
         for i in range(indexes[-1].shape[0]//2):
             meta_optimizer.zero_grad()
+            #meta_model.eval()
             for p_global in zip(meta_model.parameters()):
                 p_global[0].grad = torch.zeros_like(p_global[0].data)
 
@@ -196,7 +196,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                 l_model = l_model.to(device)
                 l_model.load_state_dict(meta_model.state_dict())
                 l_model.train()
-                l_optimizer = torch.optim.Adam(meta_model.parameters(), lr=local_lr)
+                l_optimizer = torch.optim.Adam(l_model.parameters(), lr=local_lr)
 
                 nb_batches_l = n_batches[l]//min(n_batches)
 
@@ -204,6 +204,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     i_batch = indexes[l][i*nb_batches_l+j]
                     input_batch = input_train[l][i_batch,:,:].to(device)
                     output_batch = output_train[l][i_batch,:].to(device)
+
                     l_optimizer.zero_grad()
 
                     # forward pass
@@ -236,9 +237,14 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
 
                     meta_loss.backward()
 
-                    for p_global, p_local in zip(meta_model.parameters(), l_model.parameters()):
-                        p_global.grad += p_local.grad  # First-order approx. -> add gradients of finetuned and base model
-                    
+                    local_grads = []
+                    for p_local in zip(l_model.parameters()):
+                        local_grads.append(p_local[0].grad)
+
+                    for i, p_global in enumerate(zip(meta_model.parameters())):
+                        p_global[0].grad += local_grads[i]  # First-order approx. -> add gradients of finetuned and base model
+                        
+            meta_model.train()
             meta_optimizer.step()
         
         meta_scheduler.step()
