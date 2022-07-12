@@ -193,6 +193,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
             #inner loop : train the local models
             for l in range(len(input_train)):
                 l_model = AE_CNN(input_features=len_in,output_features=len_out)
+                l_model = l_model.to(device)
                 l_model.load_state_dict(meta_model.state_dict())
                 l_model.train()
                 l_optimizer = torch.optim.Adam(meta_model.parameters(), lr=local_lr)
@@ -292,12 +293,12 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     input_train, output_train, input_test, output_test = utils.make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory)
-    print(input_train.shape)
+    #print(input_train.shape)
 
     in_train_list = [input_train[sum(len(train_times)*largeurs[i]**2 for i in range(j)):
                     sum(len(train_times)*largeurs[i]**2 for i in range(j+1))] for j in range(len(largeurs)-1)]
     in_train_list.insert(0,input_train[:len(train_times)*largeurs[0]**2])
-    print(len(in_train_list), in_train_list[0].shape, in_train_list[1].shape, in_train_list[2].shape)
+    #print(len(in_train_list), in_train_list[0].shape, in_train_list[1].shape, in_train_list[2].shape)
 
     in_test_list = [input_test[sum(len(test_times)*largeurs[i]**2 for i in range(j)):
                     sum(len(test_times)*largeurs[i]**2 for i in range(j+1))] for j in range(len(largeurs)-1)]
