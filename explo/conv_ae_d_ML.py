@@ -176,6 +176,9 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
 
+    for p_global in zip(meta_model.parameters()):
+        p_global[0].grad = torch.zeros_like(p_global[0].data)
+
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
         tot_meta_losses=0
@@ -186,9 +189,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
         #outer loop :
         for i in range(indexes[-1].shape[0]//2):
             meta_optimizer.zero_grad()
-            #meta_model.eval()
-            for p_global in zip(meta_model.parameters()):
-                p_global[0].grad = torch.zeros_like(p_global[0].data)
+            meta_model.eval()
 
             #inner loop : train the local models
             for l in range(len(input_train)):
@@ -243,7 +244,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
 
                     for i, p_global in enumerate(zip(meta_model.parameters())):
                         p_global[0].grad += local_grads[i]  # First-order approx. -> add gradients of finetuned and base model
-                        
+
             meta_model.train()
             meta_optimizer.step()
         
