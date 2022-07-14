@@ -90,9 +90,9 @@ class AE_CNN(nn.Module):
         self.mean = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob3),
                                         nn.Linear(hidden_size3, output_features))
-        self.logvar = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+        '''self.logvar = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob4),
-                                        nn.Linear(hidden_size3, output_features))
+                                        nn.Linear(hidden_size3, output_features))'''
                                         
     def encode(self, x):
         return self.encoder(x)
