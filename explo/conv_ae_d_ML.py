@@ -105,7 +105,7 @@ class AE_CNN(nn.Module):
         x = torch.flatten(x, start_dim=1,end_dim=-1)
         #return self.mean(self.regression(x)), self.logvar(self.regression(x))
         return self.mean(self.regression(x))
-        
+
 def custom_loss(mu, logvar, obj):
     var = torch.exp(logvar)
     var2 = torch.mul(var,var)
@@ -216,7 +216,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     
                     # compute loss
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
-                    pred_loss = F.mes_loss(output_pred,output_batch)
+                    pred_loss = F.mse_loss(output_pred,output_batch)
                     loss = ae_loss + pred_loss
 
                     # backward pass
@@ -236,7 +236,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     
                     # compute loss
                     ae_meta_loss = F.mse_loss(output_ae_meta,input_meta_batch, reduction='mean')
-                    pred_meta_loss = custom_loss(output_ae_meta,output_meta_batch)
+                    pred_meta_loss = F.mse_loss(output_ae_meta,output_meta_batch)
                     meta_loss = ae_meta_loss + pred_meta_loss
 
                     meta_loss.backward()
