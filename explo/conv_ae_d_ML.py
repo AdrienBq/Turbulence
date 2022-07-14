@@ -143,7 +143,7 @@ def test(model, device, input_test, output_test):
         test_loss += F.mse_loss(output_pred, output, reduction='mean')
         tot_loss += ae_loss + test_loss
 
-    return tot_loss.item(), ae_loss.item(), log_lik.item(), test_loss.item()
+    return tot_loss.item(), ae_loss.item(), log_lik, test_loss.item()
 
 def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
     '''
