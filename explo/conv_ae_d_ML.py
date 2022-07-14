@@ -236,7 +236,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     
                     # compute loss
                     ae_meta_loss = F.mse_loss(output_ae_meta,input_meta_batch, reduction='mean')
-                    pred_meta_loss = F.mse_loss(output_ae_meta,output_meta_batch)
+                    pred_meta_loss = F.mse_loss(output_pred_meta,output_meta_batch)
                     meta_loss = ae_meta_loss + pred_meta_loss
 
                     meta_loss.backward()
