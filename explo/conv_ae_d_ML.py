@@ -101,9 +101,10 @@ class AE_CNN(nn.Module):
         return self.decoder(x)
 
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
-        x = self.encode(x)
+        '''x = self.encode(x)
         x = torch.flatten(x, start_dim=1,end_dim=-1)
-        return self.mean(self.regression(x)), self.logvar(self.regression(x))
+        return self.mean(self.regression(x)), self.logvar(self.regression(x))'''
+        return self.mean(self.regression((self.encode(x))))
 
 def custom_loss(mu, logvar, obj):
     var = torch.exp(logvar)
@@ -138,8 +139,8 @@ def test(model, device, input_test, output_test):
         #compute loss
         output = output_test[l].to(device)
         ae_loss += F.mse_loss(ae_output, input, reduction='mean')
-        log_lik += custom_loss(output_pred[0], output_pred[1], output)
-        test_loss += F.mse_loss(output_pred[0], output, reduction='mean')
+        #log_lik += custom_loss(output_pred[0], output_pred[1], output)
+        test_loss += F.mse_loss(output_pred, output, reduction='mean')
         tot_loss += ae_loss + test_loss
 
     return tot_loss.item(), ae_loss.item(), log_lik.item(), test_loss.item()
@@ -210,11 +211,12 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
 
                     # forward pass
                     output_ae = l_model.decode(l_model.encode(input_batch))
-                    mu,logvar = l_model(input_batch)
+                    #mu,logvar = l_model(input_batch)
+                    output_pred = l_model(input_batch)
                     
                     # compute loss
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
-                    pred_loss = custom_loss(mu,logvar,output_batch)
+                    pred_loss = F.mes_loss(output_pred,output_batch)
                     loss = ae_loss + pred_loss
 
                     # backward pass
@@ -229,11 +231,12 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
 
                     # forward pass
                     output_ae_meta = l_model.decode(l_model.encode(input_meta_batch))
-                    mu,logvar = l_model(input_meta_batch)
+                    #mu,logvar = l_model(input_meta_batch)
+                    output_pred_meta = l_model(input_meta_batch)
                     
                     # compute loss
                     ae_meta_loss = F.mse_loss(output_ae_meta,input_meta_batch, reduction='mean')
-                    pred_meta_loss = custom_loss(mu,logvar,output_meta_batch)
+                    pred_meta_loss = custom_loss(output_ae_meta,output_meta_batch)
                     meta_loss = ae_meta_loss + pred_meta_loss
 
                     meta_loss.backward()
