@@ -101,11 +101,11 @@ class AE_CNN(nn.Module):
         return self.decoder(x)
 
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
-        '''x = self.encode(x)
+        x = self.encode(x)
         x = torch.flatten(x, start_dim=1,end_dim=-1)
-        return self.mean(self.regression(x)), self.logvar(self.regression(x))'''
-        return self.mean(self.regression((self.encode(x))))
-
+        #return self.mean(self.regression(x)), self.logvar(self.regression(x))
+        return self.mean(self.regression(x))
+        
 def custom_loss(mu, logvar, obj):
     var = torch.exp(logvar)
     var2 = torch.mul(var,var)
