@@ -174,15 +174,14 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
     return test_losses[-1][0]
 
 def objective(trial):
-    coarse_factors = [32]
+    coarse_factors = [16,32,64]
+    largeurs = [int(512//coarse_factor) for coarse_factor in coarse_factors]
     Directory = f"data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
-    nz=376
+    nz=376      #output size (vertical size of the simulation)
 
-    len_samples = nz*len(variables)
     len_in = nz*(len(variables)-1)
-    len_out = nz
     n_in_features = len(variables)-1
 
     model_number = 11
@@ -190,6 +189,7 @@ def objective(trial):
     tmax=62+1
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print('using cuda : ', torch.cuda.is_available())
 
     path_times_train = f'data/test_train_times/times_train_{model_number}.csv'
     path_times_test = f'data/test_train_times/times_test_{model_number}.csv'
@@ -205,22 +205,43 @@ def objective(trial):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     input_train, output_train, input_test, output_test = utils.make_train_test_ds(coarse_factors, len_in, train_times, test_times, Directory)
-    ins = [input_train, input_test]
-    outs = [output_train, output_test]
+    #print(input_train.shape)
 
-    for j in range(len(ins)):
-        input = ins[j]
-        input = input.reshape(-1,len(variables)-1,nz)
-        for i in range(len(variables)-1):
-            input[:,i] -= torch.mean(input[:,i])
-            input[:,i] /= torch.std(input[:,i])
-        ins[j] = input
+    in_train_list = [input_train[sum(len(train_times)*largeurs[i]**2 for i in range(j)):
+                    sum(len(train_times)*largeurs[i]**2 for i in range(j+1))] for j in range(len(largeurs)-1)]
+    in_train_list.insert(0,input_train[:len(train_times)*largeurs[0]**2])
+    #print(len(in_train_list), in_train_list[0].shape, in_train_list[1].shape, in_train_list[2].shape)
 
-    for i in range(len(outs)):
-        output = outs[i]
-        output -= torch.mean(output)
-        output /= torch.std(output)
-        outs[i] = output
+    in_test_list = [input_test[sum(len(test_times)*largeurs[i]**2 for i in range(j)):
+                    sum(len(test_times)*largeurs[i]**2 for i in range(j+1))] for j in range(len(largeurs)-1)]
+    in_test_list.insert(0,input_test[:len(test_times)*largeurs[0]**2])
+
+    out_train_list = [output_train[sum(len(train_times)*largeurs[i]**2 for i in range(j)): 
+                    sum(len(train_times)*largeurs[i]**2 for i in range(j+1))] for j in range(len(largeurs)-1)]
+    out_train_list.insert(0,output_train[:len(train_times)*largeurs[0]**2])
+
+    out_test_list = [output_test[sum(len(test_times)*largeurs[i]**2 for i in range(j)):
+                    sum(len(test_times)*largeurs[i]**2 for i in range(j+1))] for j in range(len(largeurs)-1)]
+    out_test_list.insert(0,output_test[:len(test_times)*largeurs[0]**2])
+
+    ins = [in_train_list, in_test_list]
+    outs = [out_train_list, out_test_list]
+
+    for k in range(len(ins)):
+        for j in range(len(ins[k])):
+            input = ins[k][j]
+            input = input.reshape(-1,len(variables)-1,nz)
+            for i in range(len(variables)-1):
+                input[:,i] -= torch.mean(input[:,i])
+                input[:,i] /= torch.std(input[:,i])
+            ins[k][j] = input
+
+    for k in range(len(outs)):
+        for j in range(len(outs)):
+            output = outs[k][j]
+            output -= torch.mean(output)
+            output /= torch.std(output)
+            outs[k][j] = output
 
     batch_size = 32             
     nb_epochs = 20      
