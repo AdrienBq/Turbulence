@@ -90,9 +90,9 @@ class AE_CNN(nn.Module):
         self.mean = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob3),
                                         nn.Linear(hidden_size3, output_features))
-        '''self.logvar = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+        self.logvar = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob4),
-                                        nn.Linear(hidden_size3, output_features))'''
+                                        nn.Linear(hidden_size3, output_features))
                                         
     def encode(self, x):
         return self.encoder(x)
@@ -103,8 +103,8 @@ class AE_CNN(nn.Module):
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
         x = self.encode(x)
         x = torch.flatten(x, start_dim=1,end_dim=-1)
-        #return self.mean(self.regression(x)), self.logvar(self.regression(x))
-        return self.mean(self.regression(x))
+        return self.mean(self.regression(x)), self.logvar(self.regression(x))
+        #return self.mean(self.regression(x))
 
 def custom_loss(mu, logvar, obj):
     var = torch.exp(logvar)
@@ -139,11 +139,11 @@ def test(model, device, input_test, output_test):
         #compute loss
         output = output_test[l].to(device)
         ae_loss += F.mse_loss(ae_output, input, reduction='mean')
-        #log_lik += custom_loss(output_pred[0], output_pred[1], output)
-        test_loss += F.mse_loss(output_pred, output, reduction='mean')
+        log_lik += custom_loss(output_pred[0], output_pred[1], output)
+        test_loss += F.mse_loss(output_pred[0], output, reduction='mean')
         tot_loss += ae_loss + test_loss
 
-    return tot_loss.item(), ae_loss.item(), log_lik, test_loss.item()
+    return tot_loss.item(), ae_loss.item(), log_lik.item(), test_loss.item()
 
 def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
     '''
@@ -169,16 +169,13 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_model = AE_CNN(input_features=len_in,output_features=len_out)
     meta_model = meta_model.to(device)
 
-    meta_lr = 3.47*1e-4
-    meta_decay = 0.942
-    local_lr = 2.42*1e-3
-    local_decay = 0.972
+    meta_lr = 1e-3
+    meta_decay = 0.95
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
 
-    for p_global in zip(meta_model.parameters()):
-        p_global[0].grad = torch.zeros_like(p_global[0].data)
+    l_factors = [(max(n_batches)-n_batches[l])//min(n_batches) +1 for l in range(len(input_train))]
 
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
@@ -194,7 +191,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
             #inner loop : train the local models
             for l in range(len(input_train)):
                 nb_batches_l = n_batches[l]//min(n_batches)
-
+            
                 for j in range(nb_batches_l):
                     i_batch = indexes[l][i*nb_batches_l+j]
                     input_batch = input_train[l][i_batch,:,:].to(device)
@@ -202,23 +199,21 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
 
                     # forward pass
                     output_ae = meta_model.decode(meta_model.encode(input_batch))
-                    #mu,logvar = l_model(input_batch)
+                    mu,logvar = meta_model(input_batch)
                     output_pred = meta_model(input_batch)
                     
                     # compute loss
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
-                    pred_loss = F.mse_loss(output_pred,output_batch)
-                    loss = ae_loss + pred_loss
-                    tot_losses += loss.item()
+                    #pred_loss = F.mse_loss(output_pred,output_batch)
+                    log_lik = custom_loss(mu, logvar, output_batch)
+                    loss = ae_loss + log_lik
+                    tot_losses += l_factors[l]*loss.item()
 
                     # backward pass
                     loss.backward()
 
             meta_optimizer.step()
-        
-        if epoch%10 == 0:
             meta_scheduler.step()
-            local_lr *= local_decay
 
         train_losses.append(tot_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
         test_loss = test(meta_model, device, input_test, output_test)
@@ -227,7 +222,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
         if epoch%10 == 0:
             print('ae_loss :', test_loss[1], 'log-likelihood :', test_loss[2], 'pred_loss :', test_loss[3])
 
-    print('Model : meta_lr [{}], meta_decay [{:.4f}], local_lr [{}], local_decay [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(meta_lr, meta_decay, local_lr, local_decay, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
+    print('Model : meta_lr [{}], meta_decay [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(meta_lr, meta_decay, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
     
     return meta_model
 
@@ -308,7 +303,7 @@ def main():
             outs[k][j] = output
 
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 200               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 20               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
 
