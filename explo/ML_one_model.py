@@ -212,11 +212,12 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     loss.backward()
 
             meta_optimizer.step()
-            meta_scheduler.step()
 
         train_losses.append(tot_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
         test_loss = test(meta_model, device, input_test, output_test)
         test_losses.append(test_loss[3])
+
+        meta_scheduler.step()
 
         if epoch%2 == 0:
             print('ae_loss :', test_loss[1], 'log-likelihood :', test_loss[2], 'pred_loss :', test_loss[3])
