@@ -171,7 +171,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
         if epoch%5==0:
             print('Model : meta_lr [{:.4f}], meta_decay [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(meta_lr, meta_decay, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
     
-    print(len(test_losses), len(test_losses[1]))
+    print(len(test_losses))
     return test_losses[-1][0]
 
 def objective(trial):
