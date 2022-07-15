@@ -168,7 +168,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
         if trial.should_prune():
             raise optuna.TrialPruned()
 
-    print('Model : lr_enc [{:.4f}], decay_enc [{:.4f}], lr_dec[{:.4f}], decay_dec [{:.4f}], lr_reg [{:.4f}], decay_reg [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(lr_enc, decay_enc, lr_dec, decay_dec, lr_reg, decay_reg, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
+    print('Model : meta_lr [{:.4f}], meta_decay [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(meta_lr, meta_decay, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
     return test_losses[-1][0]
 
 def objective(trial):
