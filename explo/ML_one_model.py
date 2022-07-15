@@ -169,7 +169,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_model = AE_CNN(input_features=len_in,output_features=len_out)
     meta_model = meta_model.to(device)
 
-    meta_lr = 1e-3
+    meta_lr = 1e-2
     meta_decay = 0.95
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
@@ -200,11 +200,10 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     # forward pass
                     output_ae = meta_model.decode(meta_model.encode(input_batch))
                     mu,logvar = meta_model(input_batch)
-                    output_pred = meta_model(input_batch)
                     
                     # compute loss
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
-                    #pred_loss = F.mse_loss(output_pred,output_batch)
+                    pred_loss = F.mse_loss(mu,output_batch)
                     log_lik = custom_loss(mu, logvar, output_batch)
                     loss = ae_loss + log_lik
                     tot_losses += l_factors[l]*loss.item()
@@ -219,7 +218,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
         test_loss = test(meta_model, device, input_test, output_test)
         test_losses.append(test_loss[3])
 
-        if epoch%10 == 0:
+        if epoch%2 == 0:
             print('ae_loss :', test_loss[1], 'log-likelihood :', test_loss[2], 'pred_loss :', test_loss[3])
 
     print('Model : meta_lr [{}], meta_decay [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(meta_lr, meta_decay, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
