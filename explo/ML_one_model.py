@@ -103,8 +103,8 @@ class AE_CNN(nn.Module):
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
         x = self.encode(x)
         x = torch.flatten(x, start_dim=1,end_dim=-1)
-        return self.mean(self.regression(x)), self.logvar(self.regression(x))
-        #return self.mean(self.regression(x))
+        #return self.mean(self.regression(x)), self.logvar(self.regression(x))
+        return self.mean(self.regression(x))
 
 def custom_loss(mu, logvar, obj):
     var = torch.exp(logvar)
@@ -205,7 +205,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
                     pred_loss = F.mse_loss(mu,output_batch)
                     log_lik = custom_loss(mu, logvar, output_batch)
-                    loss = ae_loss + log_lik
+                    loss = ae_loss + pred_loss
                     tot_losses += l_factors[l]*loss.item()
 
                     # backward pass
