@@ -130,7 +130,7 @@ def test(model, device, input_test, output_test):
     test_loss = 0
     tot_loss = 0
 
-    for l in range(1):#len(input_test)):
+    for l in range(len(input_test)):
         #forward pass
         input = input_test[l].to(device)
         ae_output = model.decode(model.encode(input))
@@ -169,10 +169,10 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_model = AE_CNN(input_features=len_in,output_features=len_out)
     meta_model = meta_model.to(device)
 
-    meta_lr = 1e-2
-    meta_decay = 0.9
-    local_lr = 1e-3
-    local_decay = 0.9
+    meta_lr = 3.47*1e-4
+    meta_decay = 0.942
+    local_lr = 2.42*1e-3
+    local_decay = 0.972
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
@@ -182,24 +182,17 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
 
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
-        tot_meta_losses=0
         indexes = []
         for l in range(len(input_train)):
             indexes.append(np.random.permutation(input_train[l].shape[0]).reshape(-1, batch_size))
 
         #outer loop :
-        for i in range(indexes[-1].shape[0]//2):
+        for i in range(indexes[-1].shape[0]):
             meta_optimizer.zero_grad()
-            meta_model.eval()
+            meta_model.train()
 
             #inner loop : train the local models
-            for l in range(1): #len(input_train)):
-                l_model = AE_CNN(input_features=len_in,output_features=len_out)
-                l_model = l_model.to(device)
-                l_model.load_state_dict(meta_model.state_dict())
-                l_model.train()
-                l_optimizer = torch.optim.Adam(l_model.parameters(), lr=local_lr)
-
+            for l in range(len(input_train)):
                 nb_batches_l = n_batches[l]//min(n_batches)
 
                 for j in range(nb_batches_l):
@@ -207,59 +200,31 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     input_batch = input_train[l][i_batch,:,:].to(device)
                     output_batch = output_train[l][i_batch,:].to(device)
 
-                    l_optimizer.zero_grad()
-
                     # forward pass
-                    output_ae = l_model.decode(l_model.encode(input_batch))
+                    output_ae = meta_model.decode(meta_model.encode(input_batch))
                     #mu,logvar = l_model(input_batch)
-                    output_pred = l_model(input_batch)
+                    output_pred = meta_model(input_batch)
                     
                     # compute loss
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
                     pred_loss = F.mse_loss(output_pred,output_batch)
                     loss = ae_loss + pred_loss
+                    tot_losses += loss.item()
 
                     # backward pass
                     loss.backward()
-                    l_optimizer.step()
 
-                    #meta_loss
-                    i_meta_batch = indexes[l][-(i*nb_batches_l+j+1)]
-                    input_meta_batch = input_train[l][i_meta_batch,:,:].to(device)
-                    output_meta_batch = output_train[l][i_meta_batch,:].to(device)
-                    l_optimizer.zero_grad()
-
-                    # forward pass
-                    output_ae_meta = l_model.decode(l_model.encode(input_meta_batch))
-                    #mu,logvar = l_model(input_meta_batch)
-                    output_pred_meta = l_model(input_meta_batch)
-                    
-                    # compute loss
-                    ae_meta_loss = F.mse_loss(output_ae_meta,input_meta_batch, reduction='mean')
-                    pred_meta_loss = F.mse_loss(output_pred_meta,output_meta_batch)
-                    meta_loss = ae_meta_loss + pred_meta_loss
-
-                    meta_loss.backward()
-
-                    local_grads = []
-                    for p_local in zip(l_model.parameters()):
-                        local_grads.append(p_local[0].grad)
-
-                    for i, p_global in enumerate(zip(meta_model.parameters())):
-                        p_global[0].grad += local_grads[i]  # First-order approx. -> add gradients of finetuned and base model
-
-            meta_model.train()
             meta_optimizer.step()
         
         if epoch%10 == 0:
             meta_scheduler.step()
             local_lr *= local_decay
 
-        train_losses.append(tot_meta_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
+        train_losses.append(tot_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
         test_loss = test(meta_model, device, input_test, output_test)
         test_losses.append(test_loss[3])
 
-        if epoch%5 == 0:
+        if epoch%10 == 0:
             print('ae_loss :', test_loss[1], 'log-likelihood :', test_loss[2], 'pred_loss :', test_loss[3])
 
     print('Model : meta_lr [{}], meta_decay [{:.4f}], local_lr [{}], local_decay [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(meta_lr, meta_decay, local_lr, local_decay, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
@@ -343,7 +308,7 @@ def main():
             outs[k][j] = output
 
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 100               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 200               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
 
