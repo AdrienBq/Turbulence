@@ -205,7 +205,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
                     pred_loss = F.mse_loss(mu,output_batch)
                     log_lik = custom_loss(mu, logvar, output_batch)
-                    loss = ae_loss + pred_loss
+                    loss = ae_loss + log_lik
                     tot_losses += l_factors[l]*loss.item()
 
                     # backward pass
@@ -311,15 +311,15 @@ def main():
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
-    torch.save(meta_model.state_dict(), f"explo/models/meta_model.pt")
+    torch.save(meta_model.state_dict(), f"explo/models/meta_d_net.pt")
 
     try :
         plt.plot(train_losses_arr[1:], label='train loss')
-        plt.plot(test_losses_arr[:], label='test pred loss')
+        plt.plot(test_losses_arr[1:], label='test pred loss')
         plt.title(f"AE CONV net training")
         plt.legend()
         plt.show()
-        plt.savefig(f"explo/images/ML_loss.png")
+        plt.savefig(f"explo/images/ML_d_loss.png")
     except :
         pass
 
