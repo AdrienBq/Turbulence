@@ -17,6 +17,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import sklearn.metrics as metrics
+
 
 #----------------MODEL DEF----------------
 
@@ -414,6 +416,7 @@ def main():
     net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,latent_dim,len_out], [z_dim, len_out], [n_in_features, len_out]]
     net_preds = []
     losses = []
+    R2s = []
 
     true_ds = outs[1][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
 
@@ -482,8 +485,14 @@ def main():
         # compute loss
         loss = F.mse_loss(output_pred, outs[1], reduction='mean')
 
+        # compute R^2
+        print('output shape :', output_pred.shape)
+        r2 = metrics.r2_score(outs[1].cpu().detach().numpy().reshape(-1,1), output_pred.cpu().detach().numpy().reshape(-1,1))
+
         losses.append(loss)
+        R2s.append(r2)
         print("{} loss : {}".format(name, loss))
+        print("{} r2 : {}".format(name, r2))
 
     '''for i in range(len(model_names)) :
         pred_ds = net_preds[i][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
@@ -502,7 +511,7 @@ def main():
     utils.plot_loss_div(input_pred, outs[1], model_div, L,'explo/images/eval/loss_div.png')
     '''
 
-    #----------------L COMPARISON---------------
+    #----------------R^2----------------
 
     
 

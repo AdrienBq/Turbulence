@@ -725,3 +725,20 @@ def interpolation(input,method,max_in_height=1,max_out_height=1,model=None,No=37
     else:
         print('Method not implemented')
         return None
+
+
+#----------------------eval metrics------------------------------
+
+def r2_score(y_true,y_pred):
+    '''
+    # Description
+    R2 score of the prediction.
+
+    # Parameters
+    - y_true (np.array) : true values, shape : (n_samples,output_dim)
+    - y_pred (np.array) : predicted values, shape : (n_samples,output_dim)
+    '''
+    y_bar = np.mean(y_true, axis=0)
+    denom = np.sum((y_true - y_bar)**2)
+    num = np.sum((y_true - y_pred)**2)
+    return 1 - num/denom
