@@ -198,7 +198,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
 
         train_losses.append(tot_meta_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
         test_loss = test(meta_model, device, input_test, output_test)
-        test_losses.append(test_loss[3])
+        test_losses.append(test_loss)
         
         if epoch%10 == 0:
             meta_scheduler.step()
