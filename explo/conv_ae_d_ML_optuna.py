@@ -160,7 +160,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
                     log_lik = custom_loss(mu, logvar, output_batch)
                     pred_loss = F.mse_loss(mu,output_batch)
-                    loss = ae_loss + pred_loss
+                    loss = ae_loss + log_lik
 
                     # backward pass
                     loss.backward()
@@ -179,8 +179,8 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
                     # compute loss
                     ae_meta_loss = F.mse_loss(output_ae_meta,input_meta_batch, reduction='mean')
                     pred_meta_loss = F.mse_loss(mu,output_meta_batch)
-                    log_lik = custom_loss(mu, logvar, output_meta_batch)
-                    meta_loss = ae_meta_loss + pred_meta_loss
+                    meta_log_lik = custom_loss(mu, logvar, output_meta_batch)
+                    meta_loss = ae_meta_loss + meta_log_lik
 
                     meta_loss.backward()
 
@@ -189,7 +189,8 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
                         local_grads.append(p_local[0].grad)
 
                     for i, p_global in enumerate(zip(meta_model.parameters())):
-                        print('grads :', p_global[0].grad, local_grads[i])
+                        print('meta grad :', p_global[0].grad)
+                        print('local grad :', local_grads[i])
                         p_global[0].grad += local_grads[i]  # First-order approx. -> add gradients of finetuned and base model
 
             meta_model.train()
