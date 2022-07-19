@@ -88,7 +88,7 @@ def test(model, device, input_test, output_test):
     model.eval()
     ae_loss = 0
     log_lik = 0
-    test_loss = 0
+    pred_loss = 0
     tot_loss = 0
 
     for l in range(len(input_test)):
