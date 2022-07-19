@@ -349,7 +349,7 @@ def main():
 
     #----------------PREPARE DATA----------------
 
-    coarse_factors = [64]
+    coarse_factors = [16,32,64]
     Directory = f"data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
@@ -412,7 +412,7 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    model_names = ["conv", "pca", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'meta']
+    model_names = ["conv", "pca", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'meta', 'meta_d']
     net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,latent_dim,len_out], [z_dim, len_out], [n_in_features, len_out]]
     net_preds = []
     losses = []
@@ -469,6 +469,11 @@ def main():
         elif name == 'meta':
             input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = AE_CNN_D(input_features=net_params[i-2][0] ,output_features=net_params[i-2][1])
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
+
+        elif name == 'meta_d':
+            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
+            model = AE_CNN_D(input_features=net_params[i-3][0] ,output_features=net_params[i-3][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         else :

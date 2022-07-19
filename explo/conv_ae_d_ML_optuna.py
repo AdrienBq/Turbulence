@@ -189,8 +189,8 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
                         local_grads.append(p_local[0].grad)
 
                     for i, p_global in enumerate(zip(meta_model.parameters())):
-                        print('meta grad :', p_global[0].grad)
-                        print('local grad :', local_grads[i])
+                        #print('meta grad :', p_global[0].grad)
+                        #print('local grad :', local_grads[i])
                         p_global[0].grad += local_grads[i]  # First-order approx. -> add gradients of finetuned and base model
 
             meta_model.train()
