@@ -123,9 +123,6 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
     for p_global in zip(meta_model.parameters()):
         p_global[0].grad = torch.zeros_like(p_global[0].data)
 
-    for p_global in zip(meta_model.parameters()):
-        print('init grad :', p_global[0].grad)
-
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
         tot_meta_losses=0
@@ -191,10 +188,8 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
                     for p_local in zip(l_model.parameters()):
                         local_grads.append(p_local[0].grad)
 
-                    for p_global in zip(meta_model.parameters()):
-                        print('init grad :', p_global[0].grad)
-                        
                     for i, p_global in enumerate(zip(meta_model.parameters())):
+                        print('grads :', p_global[0].grad, local_grads[i])
                         p_global[0].grad += local_grads[i]  # First-order approx. -> add gradients of finetuned and base model
 
             meta_model.train()
