@@ -14,45 +14,17 @@ import modules.utils as utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
+
+import optuna
+from optuna.trial import TrialState
 
 print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
 
 
 class AE_CNN(nn.Module):
-    '''
-    ## Description
-    Double neural network combining an AE with a simple feedforward network.
-    The AE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
-    The network outputs a mean and a variance instead of a single value to model the incertainty of the prediction.
-    The convolutional auto_encoder network with 3 convolutional layers for the encoder and 4 for the decoder. 
-    Latent space dim is 6*5=30.
-    Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
-    Feedforward net has 4 fully connected layers using batchnorm, dropout and ReLU activation.
-    '''
-    def __init__(self, input_features, output_features, drop_prob1=0.053, drop_prob2=0.009, drop_prob3=0.094, drop_prob4=0.209, hidden_size1=117, hidden_size2=458, hidden_size3=255):
-        '''
-        ## Description
-        Double neural network combining an AE with a simple feedforward network.
-        The AE maps the input to a latent space and the feedforward network maps the latent space to the output to predict fluxes.
-        The network outputs a mean and a variance instead of a single value to model the incertainty of the prediction.
-        The convolutional auto_encoder network with 3 convolutional layers for the encoder and 4 for the decoder. 
-        Latent space dim is 6*5=30.
-        Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
-        Feedforward net has 4 fully connected layers using batchnorm, dropout and ReLU activation.
-        Parameters are optimized using Optuna in the conv_ae_net_optuna.py file.
-
-        ## Parameters
-        - input_features (int) : number of input features (number of input channels of the first convolutional layer)
-        - output_features (int) : number of output features (size of the output of the last linear layer)
-        - drop_prob1 (float) : dropout probability for the first hidden layer of the feedforward net, default : 0.053
-        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.009
-        - drop_prob3 (float) : dropout probability for the third hidden layer, default : 0.094
-        - drop_prob4 (float) : dropout probability for the fourth hidden layer, default : 0.209 
-        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 227 
-        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 458
-        - hidden_size3 (int) : number of neurons in the third hidden layer, default : 255
-        '''
+    def __init__(self, input_features, output_features, drop_prob1=0.301, drop_prob2=0.121, drop_prob3=0.125, drop_prob4=0.125, hidden_size1=288, hidden_size2=471, hidden_size3=300):
         super(AE_CNN, self).__init__()
         self.encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True),
@@ -113,23 +85,13 @@ def custom_loss(mu, logvar, obj):
 
 
 def test(model, device, input_test, output_test):
-    '''
-    ## Description
-    Test the meta-model on the test set.
-
-    ## Parameters
-    - model (torch.nn.Module) : the model to test
-    - device (torch.device) : the device to use (cpu / gpu)
-    - input_test (list of torch.tensor) : the input test set. Each list element corresponds to a different coarse grained level.
-    - output_test (torch.tensor) : the output test set.
-    '''
     model.eval()
     ae_loss = 0
     log_lik = 0
     test_loss = 0
     tot_loss = 0
 
-    for l in range(1):#len(input_test)):
+    for l in range(len(input_test)):
         #forward pass
         input = input_test[l].to(device)
         ae_output = model.decode(model.encode(input))
@@ -139,39 +101,21 @@ def test(model, device, input_test, output_test):
         output = output_test[l].to(device)
         ae_loss += F.mse_loss(ae_output, input, reduction='mean')
         log_lik += custom_loss(mu, logvar, output)
-        test_loss += F.mse_loss(mu, output, reduction='mean')
-        tot_loss += ae_loss + test_loss
+        pred_loss += F.mse_loss(mu, output, reduction='mean')
+        tot_loss += ae_loss + pred_loss
 
     return tot_loss.item(), ae_loss.item(), log_lik.item(), test_loss.item()
 
-def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
-    '''
-    ## Description
-    Train the model on the training set. Loop to train multiple models with different learning rates, batch sizes and decays.
-
-    ## Parameters
-    - device: the device to use for the model
-    - batch_sizes (int) : list of batch sizes to use
-    - nb_epochs (int) : number of epochs to train the model
-    - models (list) : empty list to store the models
-    - train_losses (list) : empty list to store the training losses
-    - test_losses (list) : empty list to store the test losses
-    - input_train (list of torch.Tensor) : the training input data. Each list element corresponds to a different coarse grained level.
-    - output_train (list of torch.Tensor) : the training output data. Each list element corresponds to a different coarse grained level.
-    - input_test (list of torch.Tensor) : the test input data. Each list element corresponds to a different coarse grained level.
-    - output_test (list of torch.Tensor) : the test output data. Each list element corresponds to a different coarse grained level.
-    - len_in (int) : the length of the input data (here it's the number of input channels of the first convolutional layer)
-    - len_out (int) : the length of the output data
-    '''
+def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
 
     n_batches = [input_train[i].shape[0]//batch_size for i in range(len(input_train))]
     meta_model = AE_CNN(input_features=len_in,output_features=len_out)
     meta_model = meta_model.to(device)
 
-    meta_lr = 1e-2
-    meta_decay = 0.9
-    local_lr = 1e-3
-    local_decay = 0.9
+    meta_lr = trial.suggest_float("meta_lr", 1e-5, 1e-2, log=True)
+    meta_decay = trial.suggest_float("meta_decay", 0.9, 0.99, log=True)
+    local_lr = trial.suggest_float("local_lr", 1e-5, 1e-2, log=True)
+    local_decay = trial.suggest_float("local_decay", 0.9, 0.99, log=True)
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
@@ -258,20 +202,18 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
             meta_scheduler.step()
             local_lr *= local_decay
 
-        if epoch%5 == 0:
-            print('ae_loss :', test_loss[1], 'log-likelihood :', test_loss[2], 'pred_loss :', test_loss[3])
+        trial.report(test_losses[-1][0], epoch)
 
-    print('Model : meta_lr [{}], meta_decay [{:.4f}], local_lr [{}], local_decay [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(meta_lr, meta_decay, local_lr, local_decay, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
+        # Handle pruning based on the intermediate value.
+        if trial.should_prune():
+            raise optuna.TrialPruned()
+
+        if epoch%5==0:
+            print('Model : meta_lr [{}], meta_decay [{:.4f}], Epoch [{}/{}], ae_loss: {:.6f}, pred_loss : {:.6f}'.format(meta_lr, meta_decay, epoch+1, nb_epochs, test_losses[-1][1],test_losses[-1][3]))
     
-    return meta_model
+    return test_losses[-1][0]
 
-
-
-def main():
-    '''
-    ## Description
-    main function : create the datasets, train and test the models, save and plot the results
-    '''
+def objective(trial):
     coarse_factors = [16,32,64]
     largeurs = [int(512//coarse_factor) for coarse_factor in coarse_factors]
     Directory = f"data"
@@ -341,27 +283,36 @@ def main():
             output /= torch.std(output)
             outs[k][j] = output
 
-    batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 100               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    batch_size = 32             
+    nb_epochs = 20      
     train_losses=[]
     test_losses=[]
 
-    meta_model = train(device, batch_size, nb_epochs, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], n_in_features, nz)
-    train_losses_arr = np.array(train_losses)
-    test_losses_arr = np.array(test_losses)
-
-    torch.save(meta_model.state_dict(), f"explo/models/meta_model.pt")
-
-    try :
-        plt.plot(train_losses_arr[1:], label='train loss')
-        plt.plot(test_losses_arr[:], label='test pred loss')
-        plt.title(f"AE CONV net training")
-        plt.legend()
-        plt.show()
-        plt.savefig(f"explo/images/ML_loss.png")
-    except :
-        pass
-
+    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, ins[0], outs[0], ins[1], outs[1], n_in_features, nz)
+    return obj
 
 if __name__ == '__main__':
-    main()
+
+    sampler = optuna.samplers.TPESampler()
+    pruner = optuna.pruners.MedianPruner(n_warmup_steps=5)
+    study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
+    print("starting optimization")
+    print('using cuda : ', torch.cuda.is_available())
+    study.optimize(objective, n_trials=50, timeout=10800)
+
+    pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
+    complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
+
+    print("Study statistics: ")
+    print("  Number of finished trials: ", len(study.trials))
+    print("  Number of pruned trials: ", len(pruned_trials))
+    print("  Number of complete trials: ", len(complete_trials))
+
+    print("Best trial:")
+    trial = study.best_trial
+
+    print("  Value: ", trial.value)
+
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print("    {}: {}".format(key, value))
