@@ -168,10 +168,10 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_model = AE_CNN(input_features=len_in,output_features=len_out)
     meta_model = meta_model.to(device)
 
-    meta_lr = 1e-2
-    meta_decay = 0.9
-    local_lr = 1e-3
-    local_decay = 0.9
+    meta_lr = 4.6*1e-5
+    meta_decay = 0.98
+    local_lr = 8.9*1e-3
+    local_decay = 0.99
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)

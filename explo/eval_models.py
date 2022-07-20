@@ -516,7 +516,6 @@ def main():
     utils.plot_loss_div(input_pred, outs[1], model_div, L,'explo/images/eval/loss_div.png')
     '''
 
-    #----------------R^2----------------
 
     
 

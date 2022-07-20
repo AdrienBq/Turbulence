@@ -17,6 +17,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import sklearn.metrics as metrics
+
+
 
 class CNN(nn.Module):
     def __init__(self, input_features, output_features=6*376, drop_prob1=0.301, drop_prob2=0.121, hidden_size1=288, hidden_size2=471):
@@ -178,6 +181,7 @@ def main():
     interp_method = ["linear", "cubic", "knn", 'cnn']
     net_params = [n_in_features, len_out]
     losses = []
+    R2s = []
     net_preds = []
     true_ds = outs[1][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
 
@@ -233,9 +237,14 @@ def main():
 
         # compute loss
         loss = F.mse_loss(output_pred, outs[1], reduction='mean')
-        losses.append(loss.item())
 
+        # compute R^2
+        r2 = metrics.r2_score(outs[1].cpu().detach().numpy().reshape(-1,1), output_pred.cpu().detach().numpy().reshape(-1,1))
+
+        losses.append(loss)
+        R2s.append(r2)
         print("{} loss : {}".format(method, loss))
+        print("{} r2 : {}".format(method, r2))
 
     for i in range(len(interp_method)) :
         pred_ds = net_preds[i][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
