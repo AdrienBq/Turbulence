@@ -349,7 +349,7 @@ def main():
 
     #----------------PREPARE DATA----------------
 
-    coarse_factors = [16,32,64]
+    coarse_factors = [32]
     Directory = f"data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
@@ -482,7 +482,7 @@ def main():
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         else :
-            raise Exception("{} model is not supported".format(name)) 
+            raise Exception("{} model is not supported".format(name))
 
         model.to(device)
         model.eval()
@@ -502,10 +502,10 @@ def main():
         print("{} loss : {}".format(name, loss))
         print("{} r2 : {}".format(name, r2))
 
-    '''for i in range(len(model_names)) :
+    for i in range(len(model_names)) :
         pred_ds = net_preds[i][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
         utils.plot_output(pred_ds,true_ds,L,z,'explo/images/eval/{}_net.png'.format(model_names[i]), color='RdBu_r')
-
+    '''
     #----------------BASELINE MODEL----------------
 
     baseline_heat_flux = utils.plot_baseline(Directory, test_times, len_out, z, t, L, mean_out, std_out)

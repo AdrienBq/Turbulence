@@ -126,7 +126,7 @@ def plot_output(pred_ds,true_ds,L,z,fig_name,color='RdBu'):
     fig.colorbar(pred, ax=ax2,orientation='vertical', fraction=0.046, pad=0.04)
     ax2.set_title(f"2-D Heat Map of heat-flux predictions at Altitude {z}")
     
-    diff = ax3.imshow(np.abs(true_z-pred_z), cmap=color, interpolation='nearest', vmin=0, vmax=2.5)
+    diff = ax3.imshow(np.abs(true_z-pred_z), cmap=color, interpolation='nearest', vmin=0, vmax=3.5)
     fig.colorbar(diff, ax=ax3, orientation='vertical', fraction=0.046, pad=0.04)
     ax3.set_title(f"Abs difference between true and pred heat-flux")
     
