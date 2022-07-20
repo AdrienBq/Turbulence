@@ -412,7 +412,7 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    model_names = ["conv", "pca", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'meta', 'meta_d']
+    model_names = ["conv", "pca", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'multiL', 'multiL_d', 'meta_d']
     net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,latent_dim,len_out], [z_dim, len_out], [n_in_features, len_out]]
     net_preds = []
     losses = []
@@ -466,14 +466,19 @@ def main():
             model = AE_CNN_D(input_features=net_params[i-1][0] ,output_features=net_params[i-1][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
-        elif name == 'meta':
+        elif name == 'multiL':
             input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = AE_CNN_D(input_features=net_params[i-2][0] ,output_features=net_params[i-2][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
-        elif name == 'meta_d':
+        elif name == 'multiL_d':
             input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = AE_CNN_D(input_features=net_params[i-3][0] ,output_features=net_params[i-3][1])
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
+
+        elif name == 'meta_d':
+            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
+            model = AE_CNN_D(input_features=net_params[i-4][0] ,output_features=net_params[i-4][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         else :
@@ -483,7 +488,6 @@ def main():
         model.eval()
 
         # prediction
-        print(input_pred.shape)
         output_pred = model(input_pred)
         net_preds.append(output_pred)
 
@@ -491,7 +495,6 @@ def main():
         loss = F.mse_loss(output_pred, outs[1], reduction='mean')
 
         # compute R^2
-        print('output shape :', output_pred.shape)
         r2 = metrics.r2_score(outs[1].cpu().detach().numpy().reshape(-1,1), output_pred.cpu().detach().numpy().reshape(-1,1))
 
         losses.append(loss)

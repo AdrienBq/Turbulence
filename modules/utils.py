@@ -25,10 +25,12 @@ import torch.nn.functional as F
 def print_one_alt(path_data,var,alt,color='RdBu_r'):
     '''
     ## Description
-    print first altitude layer of a data file
+    print the demanded altitude layer of a data file
 
     ## Parameters
     - path_data (str) : path to the data file to be plotted
+    - var (str) : variable to be plotted
+    - alt (int) : altitude index
     - color (str) : colormap of the plot
     '''
     nc_init = nc.Dataset(path_data)
