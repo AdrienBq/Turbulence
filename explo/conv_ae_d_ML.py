@@ -236,7 +236,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     ae_meta_loss = F.mse_loss(output_ae_meta,input_meta_batch, reduction='mean')
                     pred_meta_loss = F.mse_loss(mu,output_meta_batch)
                     log_lik = custom_loss(mu, logvar, output_meta_batch)
-                    meta_loss = ae_meta_loss + pred_meta_loss
+                    meta_loss = ae_meta_loss + log_lik
 
                     meta_loss.backward()
 
@@ -252,7 +252,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
 
         train_losses.append(tot_meta_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
         test_loss = test(meta_model, device, input_test, output_test)
-        test_losses.append(test_loss[3])
+        test_losses.append(test_loss)
         
         if epoch%10 == 0:
             meta_scheduler.step()
