@@ -143,7 +143,7 @@ def main():
     ## Description
     main function : create the datasets, train and test the models, save and plot the results
     '''
-    coarse_factors = [64,32,16]
+    coarse_factors = [32]
     Directory = "data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
@@ -211,7 +211,7 @@ def main():
         except :
             pass
 
-    plt.savefig(f"explo/images/losses_bash.png")
+    plt.savefig(f"explo/images/losses_simple_net.png")
 
 
 if __name__ == '__main__':

@@ -22,20 +22,24 @@ import torch.nn.functional as F
 
 #--------------PRINT FUNCTIONS-----------------------
 
-def print_one_alt(path_data,var,alt,color='RdBu_r'):
+def print_one_alt(path_data,var,alt,L=32,coarse=False,color='RdBu_r'):
     '''
     ## Description
-    print the demanded altitude layer of a data file
+    print the demanded altitude layer of a data file.
 
     ## Parameters
     - path_data (str) : path to the data file to be plotted
     - var (str) : variable to be plotted
     - alt (int) : altitude index
+    - L (int) : coarsening factor
+    - coarse (bool) : if True, coarsen and then plot the data
     - color (str) : colormap of the plot
     '''
     nc_init = nc.Dataset(path_data)
-    arr = nc_init[f'{var}xy{alt}'][:].filled()[0,0,:,:]
-    im = plt.imshow(arr , cmap = color , interpolation = 'nearest' )
+    arr = nc_init[f'{var}xy{alt}'][:].filled()
+    if coarse :
+        arr = coarse_array(arr,L)
+    im = plt.imshow(arr[0,0,:,:] , cmap = color , interpolation = 'nearest' )
     plt.colorbar(im)
     plt.title(f"2-D Heat Map of {var}")
     plt.show()
@@ -90,7 +94,7 @@ def plot_baseline(Directory, test_times, len_out, z, t, L, mean_out, std_out, co
 
     fig.tight_layout()
     plt.show()
-    plt.savefig('explo/images/baseline_heat_flux.png')
+    #plt.savefig('explo/images/baseline_heat_flux.png')
 
     return baseline_heat_flux
 
@@ -132,7 +136,7 @@ def plot_output(pred_ds,true_ds,L,z,fig_name,color='RdBu'):
     
     plt.tight_layout()
     plt.show()
-    plt.savefig(fig_name)
+    #plt.savefig(fig_name)
 
 
 def plot_loss_div(input_ds,true_ds,model,L,fig_name):
@@ -197,7 +201,7 @@ def plot_loss_div(input_ds,true_ds,model,L,fig_name):
     plt.title('losses vs horizontal speed divergence')
     plt.xlabel('horizontal speed divergence')
     plt.ylabel('loss')
-    plt.savefig(fig_name)
+    #plt.savefig(fig_name)
     plt.show()
 
 

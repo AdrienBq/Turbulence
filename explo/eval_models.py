@@ -412,8 +412,8 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    model_names = ["conv", "pca", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'multiL', 'multiL_d', 'meta_d']
-    net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,latent_dim,len_out], [z_dim, len_out], [n_in_features, len_out]]
+    model_names = ["conv", "pca","simple", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'multiL', 'multiL_d', 'meta_d']
+    net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,len_out], [len_in,latent_dim,len_out], [z_dim, len_out], [n_in_features, len_out]]
     net_preds = []
     losses = []
     R2s = []
@@ -502,10 +502,10 @@ def main():
         print("{} loss : {}".format(name, loss))
         print("{} r2 : {}".format(name, r2))
 
-    for i in range(len(model_names)) :
+    '''for i in range(len(model_names)) :
         pred_ds = net_preds[i][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
         utils.plot_output(pred_ds,true_ds,L,z,'explo/images/eval/{}_net.png'.format(model_names[i]), color='RdBu_r')
-    '''
+    
     #----------------BASELINE MODEL----------------
 
     baseline_heat_flux = utils.plot_baseline(Directory, test_times, len_out, z, t, L, mean_out, std_out)
