@@ -175,7 +175,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
 
-    l_factors = [1,4]
+    l_factors = [1,4,16]
 
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
@@ -233,7 +233,7 @@ def main():
     ## Description
     main function : create the datasets, train and test the models, save and plot the results
     '''
-    coarse_factors = [16,64]
+    coarse_factors = [16,32,64]
     largeurs = [int(512//coarse_factor) for coarse_factor in coarse_factors]
     Directory = f"data"
 
@@ -303,7 +303,7 @@ def main():
             outs[k][j] = output
 
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 100              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 120              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
 

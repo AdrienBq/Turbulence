@@ -112,7 +112,7 @@ def custom_loss(mu, logvar, obj):
     return torch.sum(logvar + div)
 
 
-def test(model, device, input_test, output_test, l_factors):
+def test(model, device, input_test, output_test):
     '''
     ## Description
     Test the meta-model on the test set.
@@ -140,7 +140,7 @@ def test(model, device, input_test, output_test, l_factors):
         ae_loss += F.mse_loss(ae_output, input, reduction='mean')
         log_lik += custom_loss(mu, logvar, output)
         test_loss += F.mse_loss(mu, output, reduction='mean')
-        tot_loss += (ae_loss + test_loss)*l_factors[l]
+        tot_loss += ae_loss + test_loss
 
     return tot_loss.item(), ae_loss.item(), log_lik.item(), test_loss.item()
 
@@ -253,7 +253,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
             meta_optimizer.step()
 
         train_losses.append(tot_meta_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
-        test_loss = test(meta_model, device, input_test, output_test, l_factors)
+        test_loss = test(meta_model, device, input_test, output_test)
         test_losses.append(test_loss)
         
         if epoch%10 == 0:
@@ -344,7 +344,7 @@ def main():
             outs[k][j] = output
 
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 100               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 150               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
 
