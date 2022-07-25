@@ -84,7 +84,7 @@ def custom_loss(mu, logvar, obj):
     return torch.sum(logvar + div)
 
 
-def test(model, device, input_test, output_test, l_factors):
+def test(model, device, input_test, output_test):
     model.eval()
     ae_loss = 0
     log_lik = 0
@@ -99,14 +99,12 @@ def test(model, device, input_test, output_test, l_factors):
 
         #compute loss
         output = output_test[l].to(device)
-        ae_loss += F.mse_loss(ae_output, input, reduction='sum')
-        print_ae = F.mse_loss(ae_output, input, reduction='mean')
+        ae_loss += F.mse_loss(ae_output, input, reduction='mean')
         log_lik += custom_loss(mu, logvar, output)
-        print_pred = F.mse_loss(mu, output, reduction='mean')
-        pred_loss += F.mse_loss(mu, output, reduction='sum')
+        pred_loss += F.mse_loss(mu, output, reduction='mean')
         tot_loss += ae_loss + pred_loss
 
-    return tot_loss.item(), print_ae.item(), log_lik.item(), print_pred.item()
+    return tot_loss.item(), ae_loss.item(), log_lik.item(), pred_loss.item()
 
 def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
 
@@ -202,7 +200,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
             meta_optimizer.step()
 
         train_losses.append(tot_meta_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
-        test_loss = test(meta_model, device, input_test, output_test, l_factors)
+        test_loss = test(meta_model, device, input_test, output_test)
         test_losses.append(test_loss)
         
         if epoch%10 == 0:
@@ -305,7 +303,7 @@ if __name__ == '__main__':
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
     print('using cuda : ', torch.cuda.is_available())
-    study.optimize(objective, n_trials=35, timeout=10800)
+    study.optimize(objective, n_trials=50, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
