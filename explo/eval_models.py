@@ -349,7 +349,7 @@ def main():
 
     #----------------PREPARE DATA----------------
 
-    coarse_factors = [32]
+    coarse_factors = [64]
     Directory = f"data"
 
     variables=['u', 'v', 'w', 'theta', 's', 'tke', 'wtheta']
