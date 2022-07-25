@@ -84,7 +84,7 @@ def custom_loss(mu, logvar, obj):
     return torch.sum(logvar + div)
 
 
-def test(model, device, input_test, output_test):
+def test(model, device, input_test, output_test, l_factors):
     model.eval()
     ae_loss = 0
     log_lik = 0
@@ -102,7 +102,7 @@ def test(model, device, input_test, output_test):
         ae_loss += F.mse_loss(ae_output, input, reduction='mean')
         log_lik += custom_loss(output_pred[0], output_pred[1], output)
         test_loss += F.mse_loss(output_pred[0], output, reduction='mean')
-        tot_loss += ae_loss + test_loss
+        tot_loss += (ae_loss + test_loss)*l_factors[l]
 
     return tot_loss.item(), ae_loss.item(), log_lik.item(), test_loss.item()
 
@@ -157,7 +157,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
             meta_optimizer.step()
 
         train_losses.append(tot_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
-        test_loss = test(meta_model, device, input_test, output_test)
+        test_loss = test(meta_model, device, input_test, output_test, l_factors)
         test_losses.append(test_loss)
 
         meta_scheduler.step()
