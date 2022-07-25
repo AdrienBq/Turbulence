@@ -174,7 +174,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
     return test_losses[-1][0]
 
 def objective(trial):
-    coarse_factors = [16,32,64]
+    coarse_factors = [16,64]
     largeurs = [int(512//coarse_factor) for coarse_factor in coarse_factors]
     Directory = f"data"
 
