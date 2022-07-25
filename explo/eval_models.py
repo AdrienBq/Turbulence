@@ -392,7 +392,6 @@ def main():
         for i in range(len(variables)-1):
             input[:,i] -= torch.mean(input[:,i])
             input[:,i] /= torch.std(input[:,i])
-        input = input.reshape(-1,len_in)
         ins[j] = input
 
     mean_out = torch.mean(outs[0]).cpu().numpy()
@@ -404,6 +403,12 @@ def main():
         output /= torch.std(output)
         outs[i] = output
 
+    #----------------BASELINE----------------
+
+    baseline_heat_flux = ins[1][:,2,:]*ins[1][:,3,:]
+    print("baseline shape :", baseline_heat_flux.shape)
+    print("out shape :", outs[1].shape)
+
     #----------------PARAMS----------------
     t=0
     z=50
@@ -412,7 +417,7 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    model_names = ["conv", "pca","simple", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'multiL', 'multiL_d', 'meta_d']
+    model_names = ["conv", "pca", "simple", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'multiL', 'multiL_d', 'meta_d']
     net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,len_out], [len_in,latent_dim,len_out], [z_dim, len_out], [n_in_features, len_out]]
     net_preds = []
     losses = []
@@ -425,26 +430,27 @@ def main():
         name = model_names[i]
         print('processing model : ',name)
         if name == "conv" :
-            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = CNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'pca':
-            _,_,V = torch.pca_lowrank(torch.concat((ins[0], ins[1]), axis=0), q=reduced_len)
-            input_pred = torch.mm(ins[1], V)
+            input_pred = input_pred.reshape(-1,len_in)
+            _,_,V = torch.pca_lowrank(torch.concat((ins[0].reshape(-1,len_in), ins[1].reshape(-1,len_in)), axis=0), q=reduced_len)
+            input_pred = torch.mm(ins[1].reshape(-1,len_in), V)
             model = PCA(input_size=net_params[i][0] ,output_size=net_params[i][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'simple':
+            input_pred = input_pred.reshape(-1,len_in)
             model = DNN(input_size=net_params[i][0] ,output_size=net_params[i][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'vae':
+            input_pred = input_pred.reshape(-1,len_in)
             model = VAE(input_features=net_params[i][0], z_dim=net_params[i][1], output_features=net_params[i][2])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'ae':
-            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             nn_model = DNN(input_size=net_params[i][0], output_size=net_params[i][1], hidden_size1=256)
             ae_models = []
             for var in variables[:-1] :
@@ -457,27 +463,22 @@ def main():
             model.load_state_dict(torch.load('explo/models/dnn_ae_net.pt', map_location=torch.device('cpu')))
 
         elif name == 'conv_ae':
-            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = AE_CNN(input_features=net_params[i][0] ,output_features=net_params[i][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'conv_ae_distrib':
-            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = AE_CNN_D(input_features=net_params[i-1][0] ,output_features=net_params[i-1][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'multiL':
-            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = AE_CNN_D(input_features=net_params[i-2][0] ,output_features=net_params[i-2][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'multiL_d':
-            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = AE_CNN_D(input_features=net_params[i-3][0] ,output_features=net_params[i-3][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
         elif name == 'meta_d':
-            input_pred = input_pred.reshape(-1,len(variables)-1,nz)
             model = AE_CNN_D(input_features=net_params[i-4][0] ,output_features=net_params[i-4][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
 
@@ -504,12 +505,17 @@ def main():
 
     '''for i in range(len(model_names)) :
         pred_ds = net_preds[i][t*largeur**2:(t+1)*largeur**2,:].cpu().detach().numpy()
-        utils.plot_output(pred_ds,true_ds,L,z,'explo/images/eval/{}_net.png'.format(model_names[i]), color='RdBu_r')
+        utils.plot_output(pred_ds,true_ds,L,z,'explo/images/eval/{}_net.png'.format(model_names[i]), color='RdBu_r')'''
     
     #----------------BASELINE MODEL----------------
 
-    baseline_heat_flux = utils.plot_baseline(Directory, test_times, len_out, z, t, L, mean_out, std_out)
-    
+    #baseline_heat_flux = utils.plot_baseline(Directory, test_times, len_out, z, t, L, mean_out, std_out)
+    baseline_loss = F.mse_loss(baseline_heat_flux, outs[1], reduction='mean')
+    baseline_r2 = metrics.r2_score(outs[1].cpu().detach().numpy().reshape(-1,1), baseline_heat_flux.cpu().detach().numpy().reshape(-1,1))
+    print("baseline loss : {}".format(baseline_loss))
+    print("baseline r2 : {}".format(baseline_r2))
+
+    '''
     #----------------Loss v. Hori div----------------
 
     input_pred = input_pred.reshape(-1,len(variables)-1,nz)
