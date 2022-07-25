@@ -112,7 +112,7 @@ def custom_loss(mu, logvar, obj):
     return torch.sum(logvar + div)
 
 
-def test(model, device, input_test, output_test):
+def test(model, device, input_test, output_test, l_factors):
     '''
     ## Description
     Test the meta-model on the test set.
@@ -140,7 +140,7 @@ def test(model, device, input_test, output_test):
         ae_loss += F.mse_loss(ae_output, input, reduction='mean')
         log_lik += custom_loss(mu, logvar, output)
         test_loss += F.mse_loss(mu, output, reduction='mean')
-        tot_loss += ae_loss + test_loss
+        tot_loss += (ae_loss + test_loss)*l_factors[l]
 
     return tot_loss.item(), ae_loss.item(), log_lik.item(), test_loss.item()
 
@@ -175,6 +175,8 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
+
+    l_factors = [1,4,16]
 
     for p_global in zip(meta_model.parameters()):
         p_global[0].grad = torch.zeros_like(p_global[0].data)
@@ -236,7 +238,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     ae_meta_loss = F.mse_loss(output_ae_meta,input_meta_batch, reduction='mean')
                     pred_meta_loss = F.mse_loss(mu,output_meta_batch)
                     log_lik = custom_loss(mu, logvar, output_meta_batch)
-                    meta_loss = ae_meta_loss + log_lik
+                    meta_loss = (ae_meta_loss + log_lik)*l_factors[l]
 
                     meta_loss.backward()
 
@@ -251,7 +253,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
             meta_optimizer.step()
 
         train_losses.append(tot_meta_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
-        test_loss = test(meta_model, device, input_test, output_test)
+        test_loss = test(meta_model, device, input_test, output_test, l_factors)
         test_losses.append(test_loss)
         
         if epoch%10 == 0:

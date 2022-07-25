@@ -84,7 +84,7 @@ def custom_loss(mu, logvar, obj):
     return torch.sum(logvar + div)
 
 
-def test(model, device, input_test, output_test):
+def test(model, device, input_test, output_test, l_factors):
     model.eval()
     ae_loss = 0
     log_lik = 0
@@ -99,12 +99,14 @@ def test(model, device, input_test, output_test):
 
         #compute loss
         output = output_test[l].to(device)
-        ae_loss += F.mse_loss(ae_output, input, reduction='mean')
+        ae_loss += F.mse_loss(ae_output, input, reduction='sum')
+        print_ae = F.mse_loss(ae_output, input, reduction='mean')
         log_lik += custom_loss(mu, logvar, output)
-        pred_loss += F.mse_loss(mu, output, reduction='mean')
+        print_pred = F.mse_loss(mu, output, reduction='mean')
+        pred_loss += F.mse_loss(mu, output, reduction='sum')
         tot_loss += ae_loss + pred_loss
 
-    return tot_loss.item(), ae_loss.item(), log_lik.item(), pred_loss.item()
+    return tot_loss.item(), print_ae.item(), log_lik.item(), print_pred.item()
 
 def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
 
@@ -119,6 +121,9 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
+
+    l_factors = [trial.suggest_int("l_factor_"+str(i), 1, 16) for i in range(len(input_train))]
+
 
     for p_global in zip(meta_model.parameters()):
         p_global[0].grad = torch.zeros_like(p_global[0].data)
@@ -180,7 +185,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
                     ae_meta_loss = F.mse_loss(output_ae_meta,input_meta_batch, reduction='mean')
                     pred_meta_loss = F.mse_loss(mu,output_meta_batch)
                     meta_log_lik = custom_loss(mu, logvar, output_meta_batch)
-                    meta_loss = ae_meta_loss + meta_log_lik
+                    meta_loss = (ae_meta_loss + meta_log_lik)*l_factors[l]
 
                     meta_loss.backward()
 
@@ -197,7 +202,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
             meta_optimizer.step()
 
         train_losses.append(tot_meta_losses/sum(n_batches[i] for i in range(len(input_train))))     # loss moyenne sur tous les batchs 
-        test_loss = test(meta_model, device, input_test, output_test)
+        test_loss = test(meta_model, device, input_test, output_test, l_factors)
         test_losses.append(test_loss)
         
         if epoch%10 == 0:
