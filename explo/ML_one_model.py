@@ -217,7 +217,8 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
         test_loss = test(meta_model, device, input_test, output_test, l_factors)
         test_losses.append(test_loss)
 
-        meta_scheduler.step()
+        if epoch < 100 :
+            meta_scheduler.step()
 
         if epoch%2 == 0:
             print('ae_loss :', test_loss[1], 'log-likelihood :', test_loss[2], 'pred_loss :', test_loss[3])
@@ -303,7 +304,7 @@ def main():
             outs[k][j] = output
 
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 120              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 200              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
 
@@ -311,7 +312,7 @@ def main():
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
-    torch.save(meta_model.state_dict(), f"explo/models/16_64_d_net.pt")
+    torch.save(meta_model.state_dict(), f"explo/models/multiL_d_net_2.pt")
 
     try :
         plt.plot(train_losses_arr[1:], label='train loss')
