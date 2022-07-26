@@ -258,7 +258,7 @@ if __name__ == '__main__':
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
     print('using cuda : ', torch.cuda.is_available())
-    study.optimize(objective, n_trials=30, timeout=10800)
+    study.optimize(objective, n_trials=50, timeout=18000)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
