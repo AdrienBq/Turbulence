@@ -170,7 +170,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_model = meta_model.to(device)
 
     meta_lr = 5.6*1e-3
-    meta_decay = 0.90
+    meta_decay = 0.92
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
@@ -217,7 +217,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
         test_loss = test(meta_model, device, input_test, output_test, l_factors)
         test_losses.append(test_loss)
 
-        if epoch < 100 :
+        if epoch < 40 :
             meta_scheduler.step()
 
         if epoch%2 == 0:
