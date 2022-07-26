@@ -169,7 +169,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_model = AE_CNN(input_features=len_in,output_features=len_out)
     meta_model = meta_model.to(device)
 
-    meta_lr = 3.6*1e-3
+    meta_lr = 7*1e-4
     meta_decay = 0.98
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
@@ -304,7 +304,7 @@ def main():
             outs[k][j] = output
 
     batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 200              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    nb_epochs = 20              # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
     train_losses=[]
     test_losses=[]
 

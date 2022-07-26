@@ -118,7 +118,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
 
-    l_factors = [trial.suggest_int("l_factor_"+str(i), 1, 10) for i in range(len(input_train))]
+    l_factors = [1,4,16]
 
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
@@ -244,7 +244,7 @@ def objective(trial):
             outs[k][j] = output
 
     batch_size = 32             
-    nb_epochs = 20      
+    nb_epochs = 15      
     train_losses=[]
     test_losses=[]
 
@@ -258,7 +258,7 @@ if __name__ == '__main__':
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
     print('using cuda : ', torch.cuda.is_available())
-    study.optimize(objective, n_trials=35, timeout=10800)
+    study.optimize(objective, n_trials=30, timeout=10800)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
