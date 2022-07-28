@@ -118,7 +118,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
 
-    l_factors = [trial.sugggest_float("l_factor_"+str(i), 0.1, 16.0, log=True) for i in range(len(input_train))]
+    l_factors = [trial.suggest_float("l_factor_"+str(i), 0.1, 16.0, log=True) for i in range(len(input_train))]
 
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
