@@ -148,7 +148,7 @@ def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, input
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
                     pred_loss = F.mse_loss(mu,output_batch)
                     log_lik = custom_loss(mu, logvar, output_batch)
-                    loss = ae_loss + log_lik
+                    loss = ae_loss + pred_loss
                     tot_losses += l_factors[l]*loss.item()
 
                     # backward pass
@@ -244,7 +244,7 @@ def objective(trial):
             outs[k][j] = output
 
     batch_size = 32             
-    nb_epochs = 15      
+    nb_epochs = 30      
     train_losses=[]
     test_losses=[]
 
@@ -258,7 +258,7 @@ if __name__ == '__main__':
     study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
     print("starting optimization")
     print('using cuda : ', torch.cuda.is_available())
-    study.optimize(objective, n_trials=50, timeout=18000)
+    study.optimize(objective, n_trials=100, timeout=18000)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])

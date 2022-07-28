@@ -205,7 +205,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
                     pred_loss = F.mse_loss(mu,output_batch)
                     log_lik = custom_loss(mu, logvar, output_batch)
-                    loss = ae_loss + log_lik
+                    loss = ae_loss + pred_loss
                     tot_losses += l_factors[l]*loss.item()
 
                     # backward pass
