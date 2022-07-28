@@ -175,7 +175,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
 
-    l_factors = [1,4,16]
+    l_factors = [1,1,1]
 
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
@@ -192,24 +192,24 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
             for l in range(len(input_train)):
                 nb_batches_l = n_batches[l]//min(n_batches)
             
-                for j in range(nb_batches_l):
-                    i_batch = indexes[l][i*nb_batches_l+j]
-                    input_batch = input_train[l][i_batch,:,:].to(device)
-                    output_batch = output_train[l][i_batch,:].to(device)
+                #for j in range(nb_batches_l):
+                i_batch = indexes[l][i*nb_batches_l+j]
+                input_batch = input_train[l][i_batch,:,:].to(device)
+                output_batch = output_train[l][i_batch,:].to(device)
 
-                    # forward pass
-                    output_ae = meta_model.decode(meta_model.encode(input_batch))
-                    mu = meta_model(input_batch)
-                    
-                    # compute loss
-                    ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
-                    pred_loss = F.mse_loss(mu,output_batch)
-                    #log_lik = custom_loss(mu, logvar, output_batch)
-                    loss = ae_loss + pred_loss
-                    tot_losses += l_factors[l]*loss.item()
+                # forward pass
+                output_ae = meta_model.decode(meta_model.encode(input_batch))
+                mu = meta_model(input_batch)
+                
+                # compute loss
+                ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
+                pred_loss = F.mse_loss(mu,output_batch)
+                #log_lik = custom_loss(mu, logvar, output_batch)
+                loss = ae_loss + pred_loss
+                tot_losses += l_factors[l]*loss.item()
 
-                    # backward pass
-                    loss.backward()
+                # backward pass
+                loss.backward()
 
             meta_optimizer.step()
 
