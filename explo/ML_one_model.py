@@ -199,12 +199,12 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
 
                     # forward pass
                     output_ae = meta_model.decode(meta_model.encode(input_batch))
-                    mu,logvar = meta_model(input_batch)
+                    mu = meta_model(input_batch)
                     
                     # compute loss
                     ae_loss = F.mse_loss(output_ae,input_batch, reduction='mean')
                     pred_loss = F.mse_loss(mu,output_batch)
-                    log_lik = custom_loss(mu, logvar, output_batch)
+                    #log_lik = custom_loss(mu, logvar, output_batch)
                     loss = ae_loss + pred_loss
                     tot_losses += l_factors[l]*loss.item()
 
