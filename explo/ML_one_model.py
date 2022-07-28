@@ -193,7 +193,8 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
                 nb_batches_l = n_batches[l]//min(n_batches)
             
                 #for j in range(nb_batches_l):
-                i_batch = indexes[l][i*nb_batches_l+j]
+                #i_batch = indexes[l][i*nb_batches_l+j]
+                i_batch = indexes[l][i]
                 input_batch = input_train[l][i_batch,:,:].to(device)
                 output_batch = output_train[l][i_batch,:].to(device)
 
