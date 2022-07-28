@@ -90,9 +90,9 @@ class AE_CNN(nn.Module):
         self.mean = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob3),
                                         nn.Linear(hidden_size3, output_features))
-        self.logvar = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+        '''self.logvar = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                         nn.Dropout(drop_prob4),
-                                        nn.Linear(hidden_size3, output_features))
+                                        nn.Linear(hidden_size3, output_features))'''
                                         
     def encode(self, x):
         return self.encoder(x)
@@ -103,8 +103,8 @@ class AE_CNN(nn.Module):
     def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
         x = self.encode(x)
         x = torch.flatten(x, start_dim=1,end_dim=-1)
-        return self.mean(self.regression(x)), self.logvar(self.regression(x))
-        #return self.mean(self.regression(x))
+        #return self.mean(self.regression(x)), self.logvar(self.regression(x))
+        return self.mean(self.regression(x))
 
 def custom_loss(mu, logvar, obj):
     var = torch.exp(logvar)
@@ -134,16 +134,16 @@ def test(model, device, input_test, output_test, l_factors):
         #forward pass
         input = input_test[l].to(device)
         ae_output = model.decode(model.encode(input))
-        output_pred = model(input)
+        mu = model(input)
 
         #compute loss
         output = output_test[l].to(device)
         ae_loss += F.mse_loss(ae_output, input, reduction='mean')
-        log_lik += custom_loss(output_pred[0], output_pred[1], output)
-        test_loss += F.mse_loss(output_pred[0], output, reduction='mean')
-        tot_loss += (ae_loss + test_loss)*l_factors[l]
-
-    return tot_loss.item(), ae_loss.item(), log_lik.item(), test_loss.item()
+        #log_lik += custom_loss(mu, logvar, output)
+        test_loss += F.mse_loss(mu, output, reduction='mean')
+        tot_loss += ae_loss + test_loss
+        print('Level {}: AE loss = {} | Test loss = {}'.format(l, ae_loss.item(), test_loss.item()))
+    return tot_loss.item(), ae_loss.item(), log_lik, test_loss.item()
 
 def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train, output_train, input_test, output_test, len_in, len_out):
     '''
