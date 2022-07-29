@@ -175,7 +175,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
     meta_scheduler = torch.optim.lr_scheduler.ExponentialLR(meta_optimizer, meta_decay, last_epoch= -1)
 
-    l_factors = [1]
+    l_factors = [1,1]
 
     for epoch in trange(nb_epochs, leave=False):
         tot_losses=0
@@ -235,7 +235,7 @@ def main():
     ## Description
     main function : create the datasets, train and test the models, save and plot the results
     '''
-    coarse_factors = [64]
+    coarse_factors = [32,64]
     largeurs = [int(512//coarse_factor) for coarse_factor in coarse_factors]
     Directory = f"data"
 
