@@ -235,7 +235,7 @@ def main():
     ## Description
     main function : create the datasets, train and test the models, save and plot the results
     '''
-    coarse_factors = [16,32,64]
+    coarse_factors = [16,32]
     largeurs = [int(512//coarse_factor) for coarse_factor in coarse_factors]
     Directory = f"data"
 
