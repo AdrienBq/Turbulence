@@ -169,7 +169,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_model = AE_CNN(input_features=len_in,output_features=len_out)
     meta_model = meta_model.to(device)
 
-    meta_lr = 5*1e-4
+    meta_lr = 1*1e-3
     meta_decay = 0.92
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
@@ -235,7 +235,7 @@ def main():
     ## Description
     main function : create the datasets, train and test the models, save and plot the results
     '''
-    coarse_factors = [16,32]
+    coarse_factors = [16,32,64]
     largeurs = [int(512//coarse_factor) for coarse_factor in coarse_factors]
     Directory = f"data"
 
