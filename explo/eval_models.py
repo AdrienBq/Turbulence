@@ -290,6 +290,59 @@ class AE_CNN(nn.Module):
         x = torch.flatten(x, start_dim=1,end_dim=-1)
         return self.regression(x)
 
+
+class AE_CNN_2(nn.Module):
+    def __init__(self, input_features, output_features, drop_prob1=0.053, drop_prob2=0.009, drop_prob3=0.094, drop_prob4=0.209, hidden_size1=117, hidden_size2=458, hidden_size3=255):
+        super(AE_CNN_2, self).__init__()
+        self.encoder = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=0, dilation=1, groups=input_features, bias=True),
+                                        nn.MaxPool1d(kernel_size=5, stride=5),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.MaxPool1d(kernel_size=5, stride=5),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.MaxPool1d(kernel_size=3, stride=3))
+
+        self.decoder = nn.Sequential(nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Upsample(scale_factor=3, mode='linear'),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Upsample(scale_factor=5, mode='linear'),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
+                                        nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Upsample(scale_factor=5, mode='linear'),
+                                        nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=2, stride=1, padding=1, dilation=1, groups=input_features, bias=True))
+        
+        self.in_pred = int(input_features*(output_features-1)/(5*5*3))
+        self.regression = nn.Sequential(nn.BatchNorm1d(self.in_pred, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Linear(self.in_pred, hidden_size1),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_prob1),
+                                        nn.Linear(hidden_size1, hidden_size2),
+                                        nn.ReLU(),
+                                        nn.BatchNorm1d(hidden_size2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_prob2),
+                                        nn.Linear(hidden_size2, hidden_size3),
+                                        nn.ReLU())
+        self.mean = nn.Sequential(nn.BatchNorm1d(hidden_size3, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+                                        nn.Dropout(drop_prob3),
+                                        nn.Linear(hidden_size3, output_features))
+        
+    def encode(self, x):
+        return self.encoder(x)
+
+    def decode(self, x):
+        return self.decoder(x)
+
+    def forward(self, x):       # x is of shape (batch_size, input_features, nz), in_size = nz*input_features
+        x = self.encode(x)
+        x = torch.flatten(x, start_dim=1,end_dim=-1)
+        return self.mean(self.regression(x))
+
+
 class AE_CNN_D(nn.Module):
     def __init__(self, input_features, output_features, drop_prob1=0.053, drop_prob2=0.009, drop_prob3=0.094, drop_prob4=0.209, hidden_size1=117, hidden_size2=458, hidden_size3=255):
         super(AE_CNN_D, self).__init__()
@@ -417,7 +470,7 @@ def main():
 
     #----------------MODEL PREDS----------------
 
-    model_names = ["conv", "pca", "simple", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'multiL', 'multiL_d', 'meta_d']
+    model_names = ["conv", "pca", "simple", "vae", 'ae', 'conv_ae', 'conv_ae_distrib', 'multiL', 'multiL_d', 'meta_d', '163264', '1632', '3264']
     net_params = [[n_in_features, len_out], [reduced_len, len_out], [len_in,len_out], [len_in,latent_dim,len_out], [z_dim, len_out], [n_in_features, len_out]]
     net_preds = []
     losses = []
@@ -481,6 +534,19 @@ def main():
         elif name == 'meta_d':
             model = AE_CNN_D(input_features=net_params[i-4][0] ,output_features=net_params[i-4][1])
             model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
+
+        elif name == '163264':
+            model = AE_CNN_2(input_features=net_params[i-5][0] ,output_features=net_params[i-5][1])
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
+
+        elif name == '1632':
+            model = AE_CNN_2(input_features=net_params[i-6][0] ,output_features=net_params[i-6][1])
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
+        
+        elif name == '3264':
+            model = AE_CNN_2(input_features=net_params[i-7][0] ,output_features=net_params[i-7][1])
+            model.load_state_dict(torch.load('explo/models/{}_net.pt'.format(name), map_location=torch.device('cpu')))
+            
 
         else :
             raise Exception("{} model is not supported".format(name))
