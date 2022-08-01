@@ -313,7 +313,7 @@ def main():
     train_losses_arr = np.array(train_losses)
     test_losses_arr = np.array(test_losses)
 
-    torch.save(meta_model.state_dict(), f"explo/models/163264_net.pt")
+    torch.save(meta_model.state_dict(), f"explo/models/1664_net.pt")
 
     try :
         plt.plot(train_losses_arr[1:], label='train loss')
@@ -321,7 +321,7 @@ def main():
         plt.title(f"AE CONV net training")
         plt.legend()
         plt.show()
-        plt.savefig(f"explo/images/163264_loss.png")
+        plt.savefig(f"explo/images/1664_loss.png")
     except :
         pass
 
