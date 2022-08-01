@@ -169,7 +169,7 @@ def train(device, batch_size, nb_epochs, train_losses, test_losses, input_train,
     meta_model = AE_CNN(input_features=len_in,output_features=len_out)
     meta_model = meta_model.to(device)
 
-    meta_lr = 1*1e-3
+    meta_lr = 5*1e-4
     meta_decay = 0.92
 
     meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=meta_lr)
@@ -321,7 +321,7 @@ def main():
         plt.title(f"AE CONV net training")
         plt.legend()
         plt.show()
-        plt.savefig(f"explo/images/16_64_d_loss.png")
+        plt.savefig(f"explo/images/163264_loss.png")
     except :
         pass
 
