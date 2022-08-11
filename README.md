@@ -4,7 +4,9 @@ In this README you can find the research project that I lead in Pr. Gentine's la
 
 <br />
 <p align="center">
-  <img src="1st_page.png">
+  <img src="1st_page.png"
+    width="400" 
+    height=auto>
 </p>
  <br />
 
