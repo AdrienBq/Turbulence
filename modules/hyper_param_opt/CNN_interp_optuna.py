@@ -7,40 +7,24 @@ import os
 import sys
 from pathlib import Path
 
-sys.path[0] = str(Path(sys.path[0]).parent)
+sys.path[0] = str(Path(sys.path[0]).parent.parent)
 os.chdir(Path(sys.path[0]))
 import modules.utils as utils
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
+
+import optuna
+from optuna.trial import TrialState
 
 print(os.getcwd())
 print('cuda available : ', torch.cuda.is_available())
 
 
 class CNN(nn.Module):
-    '''
-    ## Description
-    Learn best vertical interpolation, to increase the resolution of the input data.
-    Convolutional neural network with 2 convolutional layers and 2 fully connected layers. 
-    Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
-    '''
-    def __init__(self, input_features, output_features=6*376, drop_prob1=0.051, drop_prob2=0.465, hidden_size1=345, hidden_size2=350):
-        '''
-        ## Description
-        Convolutional neural network with 2 convolutional layers and 4 fully connected layers. 
-        Uses batchnorm and max pooling layers between convolutional layers and batchnorm, dropout and relu activation functions for linear layers.
-        Parameters are optimized using Optuna in the conv_net_optuna.py file.
-
-        ## Parameters
-        - input_features (int) : number of input features (number of input channels (number of variables))
-        - output_features (int) : number of output features (size of the output of the last linear layer), default : 376
-        - drop_prob1 (float) : dropout probability for the first hidden layer, default : 0.051
-        - drop_prob2 (float) : dropout probability for the second hidden layer, default : 0.465
-        - hidden_size1 (int) : number of neurons in the first hidden layer, default : 345
-        - hidden_size2 (int) : number of neurons in the second hidden layer, default : 350
-        '''
+    def __init__(self, input_features, output_features=6*376, drop_prob1=0.301, drop_prob2=0.121, hidden_size1=288, hidden_size2=471):
         super(CNN, self).__init__()
         self.conv = nn.Sequential(nn.BatchNorm1d(input_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
                                     nn.Conv1d(in_channels=input_features, out_channels=input_features, kernel_size=3, stride=1, padding=1, dilation=1, groups=input_features, bias=True),
@@ -72,17 +56,8 @@ class CNN(nn.Module):
         x = torch.flatten(x, start_dim=1,end_dim=-1)
         return self.regression(x).reshape(-1, 6, 376)
 
-def test(model, device, coarse_input_test, input_test):
-    '''
-    ## Description
-    Test the model on the test set.
 
-    ## Parameters
-    - model (torch.nn.Module) : the model to test
-    - device (torch.device) : the device to use (cpu / gpu)
-    - input_test (torch.tensor) : the input test set
-    - output_test (torch.tensor) : the output test set
-    '''
+def test(model, device, coarse_input_test, input_test):
     model.eval()
     # prediction
     coarse_test = np.zeros((input_test.shape[0], input_test.shape[1], 256))
@@ -95,33 +70,21 @@ def test(model, device, coarse_input_test, input_test):
     test_loss = F.mse_loss(output_pred, input_test.to(device), reduction='mean')
     return test_loss.item()
 
-def train(device, batch_size, nb_epochs, models, train_losses, test_losses, coarse_input_train, input_train, coarse_input_test, input_test, len_in, len_out):
-    '''
-    ## Description
-    Train the model on the training set. Loop to train multiple models with different learning rates, batch sizes and decays.
+def train(device, trial, batch_size, nb_epochs, train_losses, test_losses, coarse_input_train, input_train, coarse_input_test, input_test, len_in, len_out):
 
-    ## Parameters
-    - device: the device to use for the model
-    - batch_sizes (int) : list of batch sizes to use
-    - nb_epochs (int) : number of epochs to train the model
-    - models (list) : empty list to store the models
-    - train_losses (list) : empty list to store the training losses
-    - test_losses (list) : empty list to store the test losses
-    - input_train (torch.Tensor) : the training input data
-    - output_train (torch.Tensor) : the training output data
-    - input_test (torch.Tensor) : the test input data
-    - output_test (torch.Tensor) : the test output data
-    - len_in (int) : the length of the input data (here it's the number of input channels of the first convolutional layer)
-    - len_out (int) : the length of the output data
-    '''
+    lr_conv = trial.suggest_float("lr_enc", 1e-5, 1e-2, log=True)
+    decay_conv = trial.suggest_float("decay_enc", 0.9, 0.99,)
+    lr_reg = trial.suggest_float("lr_reg", 1e-5, 1e-2, log=True)
+    decay_reg = trial.suggest_float("decay_reg", 0.9, 0.99,)
+
+    drop_prob1=trial.suggest_uniform("drop_prob1", 0.0, 0.5)
+    drop_prob2=trial.suggest_uniform("drop_prob2", 0.0, 0.5)
+    hidden_size1=trial.suggest_int("hidden_size1", 100, 500)
+    hidden_size2=trial.suggest_int("hidden_size2", 100, 500)
+
     n_batches = input_train.shape[0]//batch_size
-    model = CNN(input_features=len_in,output_features=6*len_out)
+    model = CNN(input_features=len_in,output_features=6*len_out, drop_prob1=drop_prob1, drop_prob2=drop_prob2, hidden_size1=hidden_size1, hidden_size2=hidden_size2).to(device)
     model = model.to(device)
-
-    lr_conv = 1.10*1e-4
-    decay_conv = 0.978
-    lr_reg = 6.37*1e-3 
-    decay_reg = 0.909
 
     optimizer_conv = torch.optim.Adam(model.conv.parameters(), lr=lr_conv)
     scheduler_conv = torch.optim.lr_scheduler.ExponentialLR(optimizer_conv, decay_conv, last_epoch= -1)
@@ -159,23 +122,24 @@ def train(device, batch_size, nb_epochs, models, train_losses, test_losses, coar
         test_loss = test(model, device,coarse_input_test,input_test)
         test_losses.append(test_loss)
 
-        if epoch%10 == 0:
+        if epoch%5 == 0:
             print('loss :', test_loss)
 
         if epoch < 100:
             scheduler_conv.step()
-            scheduler_reg.step()
+            scheduler_reg.step()                
 
-    models.append(model)
+        trial.report(test_losses[-1], epoch)
+
+        # Handle pruning based on the intermediate value.
+        if trial.should_prune():
+            raise optuna.TrialPruned()
+        
     print('Model : lr_conv [{}], decay_conv [{:.4f}], lr_reg [{}], decay_reg [{:.4f}], Epoch [{}/{}], pred_loss : {:.6f}'.format(lr_conv, decay_conv, lr_reg, decay_reg, epoch+1, nb_epochs,test_losses[-1]))
-                
 
+    return test_losses[-1]
 
-def main():
-    '''
-    ## Description
-    main function : create the datasets, train and test the models, save and plot the results
-    '''
+def objective(trial):
     coarse_factors = [32]
     Directory = f"data"
 
@@ -220,31 +184,37 @@ def main():
         for i in range(input.shape[2]//2):
             coarse[:,:,i] = input[:,:,2*i]
         coarses.append(coarse)
-    
 
-
-    batch_size = 32             # obligé de le mettre à 16 si pls L car sinon le nombre total de samples n'est pas divisible par batch_size 
-    nb_epochs = 10               # et on ne peut donc pas reshape. Sinon il ne pas prendre certains samples pour que ça tombe juste.
+    batch_size = 32             
+    nb_epochs = 10      
     train_losses=[]
     test_losses=[]
-    models=[]
 
-    train(device, batch_size, nb_epochs, models, train_losses, test_losses, coarses[0], ins[0], coarses[1], ins[1], n_in_features, nz)
-    train_losses_arr = np.array(train_losses)
-    test_losses_arr = np.array(test_losses)
-
-    torch.save(models[0].state_dict(), f"explo/models/conv_interp.pt")
-
-    try :
-        plt.plot(train_losses_arr[1:], label='train')
-        plt.plot(test_losses_arr[:], label='test')
-        plt.title(f"CNN_interpolation net training")
-        plt.legend()
-        plt.show()
-        plt.savefig(f"explo/images/losses_cnn_interp.png")
-    except :
-        pass
-
+    obj = train(device, trial, batch_size, nb_epochs, train_losses, test_losses, coarses[0], ins[0], coarses[1], ins[1], n_in_features, nz)
+    return obj
 
 if __name__ == '__main__':
-    main()
+
+    sampler = optuna.samplers.TPESampler()
+    pruner = optuna.pruners.MedianPruner(n_warmup_steps=3)
+    study = optuna.create_study(direction="minimize", pruner=pruner, sampler=sampler)
+    print("starting optimization")
+    print('using cuda : ', torch.cuda.is_available())
+    study.optimize(objective, n_trials=15, timeout=10800)
+
+    pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
+    complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
+
+    print("Study statistics: ")
+    print("  Number of finished trials: ", len(study.trials))
+    print("  Number of pruned trials: ", len(pruned_trials))
+    print("  Number of complete trials: ", len(complete_trials))
+
+    print("Best trial:")
+    trial = study.best_trial
+
+    print("  Value: ", trial.value)
+
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print("    {}: {}".format(key, value))

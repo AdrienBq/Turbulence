@@ -6,16 +6,8 @@
 # Project files
 # ignore data files
 /data
-/images
-/Sara
-/tests
 /.vscode
 .DS_Store
-modules/not_used.py
-explo/local_simple_dnn.ipynb
-/explo/images/optim_cnn.pdf
-/explo/images/vaes_params
-/explo/images/ae_params
 
 # User-specific files
 *.rsuser
