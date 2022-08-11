@@ -34,7 +34,7 @@ We provide the structure of our project in which you can find usable scripts but
     ├── eval_hori_velocity_divergence.ipynb : notebook which explores the link between velocity divergence in the horizontal plane and error of a predictive model
     ├── CNN_interpolation.py : python file used to design a convolutional model for vertical interpolation
 
-├── modules
+├── modules : folder containing the main code to train and evaluate models
     ├── utils.py : file containing useful functions
     ├── model_train :folder containing the programs to run to train different networks
     ├── hyper_param_opt : folder containing programs to optimize the hyper-parameters of the models in the folder "model_train"
