@@ -67,11 +67,11 @@ The project uses the following modules :
 Without the data files you cannot run the different models.
 You need access to the high resolution simulations of Dr. Sara Shamekh in order to run the code.
 
-- If you have access to the high-res data, run the write_nc_file.ipynb code to generate the coarse-grain data.
+- If you have access to the high-res data, run the **write_nc_file.ipynb** code to generate the coarse-grain data.
 
-- If you don't have access to the high-res data : contact me at burq.adrien@gmail.com and I will provide directly the coarse-grained data I used.
+- If you don't have access to the high-res data : contact me at burq.adrien@gmail.com and I will provide directly the coarse-grained data that I used.
 
-You also need to use the split_times function in the utils.py file to create arrays of test and train times. They are used to define which data is used for training or testing.
+You also need to use the **split_times** function in the **utils.py** file to create arrays of test and train times. They are used to define which data is used for training or testing.
 
 ### **3.2 Modify the code**
 If you want to modify the hyper-parameters of a model, in general :
