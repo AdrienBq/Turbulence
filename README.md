@@ -14,7 +14,7 @@ Our work here is based on LES simulations. The LES simulations will be used as t
 
 The first part of the project consisted in getting familiar with the high resolution simulations available, preprocessing the data and designing a predictive model for sub-grid fluxes over and arbitrary resolution scale. The second part of the project was adapting this model so that it could adapt to different resolutions and be accurate on grids with a resolution of 100m as well as on grids with a resolution of 1km.
 
-The reader can refer to the full report for a detailed walkthrough of the work.
+You can refer to the full report for a detailed walkthrough of the work.
 
 
 ## **1. Project Structure**
@@ -67,12 +67,9 @@ The project uses the following modules :
 Without the data files you cannot run the different models.
 You need access to the high resolution simulations of Dr. Sara Shamekh in order to run the code.
 
-- If you have access to the high-res data : 
-run the write_nc_file.ipynb code to generate the coarse-grain data
+- If you have access to the high-res data, run the write_nc_file.ipynb code to generate the coarse-grain data.
 
-- If you don't have access to the high-res data :
-contact me at : burq.adrien@gmail.com
-I will provide directly the coarse-grained data I used
+- If you don't have access to the high-res data : contact me at burq.adrien@gmail.com and I will provide directly the coarse-grained data I used.
 
 You also need to use the split_times function in the utils.py file to create arrays of test and train times. They are used to define which data is used for training or testing.
 
