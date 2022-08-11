@@ -14,31 +14,76 @@ Our work here is based on LES simulations. The LES simulations will be used as t
 
 The first part of the project consisted in getting familiar with the high resolution simulations available, preprocessing the data and designing a predictive model for sub-grid fluxes over and arbitrary resolution scale. The second part of the project was adapting this model so that it could adapt to different resolutions and be accurate on grids with a resolution of 100m as well as on grids with a resolution of 1km.
 
+The reader can refer to the full report for a detailed walkthrough of the work.
+
 
 ## **1. Project Structure**
 
-We provide the structure of our project in which you can find usable scripts but also exploration notebooks with comments. The notebook are listed below in the **read order**.
+We provide the structure of our project in which you can find usable scripts but also exploration notebooks with comments.
 
 ```
 .
 ├── README.md
-├── requirements.txt
-├── exploration
-    ├── free_clustering.ipynb: free administative clustering notebook
-    ├── state_clustering.ipynb: state level clustering notebook
-    ├── climate_data_clustering.ipynb: extracting climate clusters from Copernicus data
+├── full_report.pdf
+├── explo : the exploration folder
+    ├── write_nc_file.ipynb : notebook used to coarse-grain the high resolution data and store it
+    ├── temperature_variations.ipynb : notebook which explores the variations of the mean temperature with the altitude
+    ├── pca_dnn.ipynb :notebook which explores the principal compenants of the input data
+    ├── lrp.ipynb : notebook which explores the most important variables in the predictions using Layer-wise Relevant Propagation
+    ├── conv_net : notebook which explores a first convolutional network for predictions
+    ├── eval_hori_velocity_divergence.ipynb : notebook which explores the link between velocity divergence in the horizontal plane and error of a predictive model
+    ├── CNN_interpolation.py : python file used to design a convolutional model for vertical interpolation
 
-├── data
-    ├── merged_data
-    ├── external_data
-        ├── climate_data: climate data from Copernicus
-        ├── maps: maps data to plot our clusters 
+├── modules
+    ├── utils.py : file containing useful functions
+    ├── model_train :folder containing the programs to run to train different networks
+    ├── hyper_param_opt : folder containing programs to optimize the hyper-parameters of the models in the folder "model_train"
+    ├── evaluation : 
+        ├── eval_interpolation.py : file to evaluate the performance of different vertical interpolation methods
+        ├── eval_models.py : file to evaluate the performance of different sub-grid flux prediction models
         
-├── output:
-    ├── embeddings: embeddings of our climate clusters and our main crops
-    ├── clusters: clusters of our models using our datasets
-    ├── plot
+├── models : folder containing the main different models tested throught the internship that can be evaluated using the eval_models.py file
 
-├── predictions: containing the submision files
-    ├── free: free level clustering predictions 
-    ├── state: state level clustering predictions
+```
+
+## **2. Requirements**
+The project uses the following modules :
+- pandas
+- xarray
+- netCDF4
+- numpy
+- matplotlib.pyplot
+- tqdm
+- os
+- sys
+- pathlib
+- torch
+- re
+- multiprocessing
+
+
+## **3 Usage**
+### **3.1 Generate the data files**
+Without the data files you cannot run the different models.
+You need access to the high resolution simulations of Dr. Sara Shamekh in order to run the code.
+
+- If you have access to the high-res data : 
+run the write_nc_file.ipynb code to generate the coarse-grain data
+
+- If you don't have access to the high-res data :
+contact me at : burq.adrien@gmail.com
+I will provide directly the coarse-grained data I used
+
+You also need to use the split_times function in the utils.py file to create arrays of test and train times. They are used to define which data is used for training or testing.
+
+### **3.2 Modify the code**
+If you want to modify the hyper-parameters of a model, in general :
+- in the main functions, you can change : 
+    - the coarse-graining factors
+    - the batch size
+    - the number of epochs
+- in the train functions :
+    - the learning rate
+    - the optimizer
+
+To run the code, you just need to open the notebooks or run the .py files in a terminal.

@@ -181,7 +181,7 @@ def main():
     len_out = nz
     n_in_features = len(variables)-1
 
-    model_number = 11
+    model_number = 11 #used for the test / train times below
     tmin=1
     tmax=62+1
 
