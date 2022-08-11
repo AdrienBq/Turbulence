@@ -2,6 +2,8 @@
 
 In this README you can find the research project that I lead in Pr. Gentine's lab at Columbia University in the Earth and Evironmental department.
 
+This research project was done for my 5 months research internship during my 3rd year at Ecole Polytechnique.
+
 <br />
 <p align="center">
   <img src="1st_page.png"
